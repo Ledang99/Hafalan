@@ -29,14 +29,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.data.AyahContent
 import com.quranwidget.hafalan.data.PlaybackSpeeds
+import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
+import com.quranwidget.hafalan.ui.AyahArabicText
 import com.quranwidget.hafalan.ui.HafalanTheme
+import com.quranwidget.hafalan.ui.QuranFonts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -80,9 +85,14 @@ private sealed interface PlayerUi {
         val playing: Boolean,
         val speed: Float,
         val repeating: Boolean,
+        val script: ScriptEdition,
     ) : PlayerUi
 
-    data class Error(val message: String, val ayah: AyahContent?) : PlayerUi
+    data class Error(
+        val message: String,
+        val ayah: AyahContent?,
+        val script: ScriptEdition = ScriptEdition.UTHMANI,
+    ) : PlayerUi
 }
 
 @Composable
@@ -94,19 +104,31 @@ private fun AudioPlayerScreen(
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
     LaunchedEffect(Unit) {
-        val (ayah, speed, repeat) = withContext(Dispatchers.IO) {
+        data class Load(
+            val ayah: AyahContent,
+            val speed: Float,
+            val repeat: Boolean,
+            val script: ScriptEdition,
+        )
+        val loaded = withContext(Dispatchers.IO) {
             val repo = HafalanApp.get().repository
-            Triple(
-                repo.loadAyahForPlayback(),
-                repo.playbackSpeed(),
-                repo.repeatAyah(),
+            Load(
+                ayah = repo.loadAyahForPlayback(),
+                speed = repo.playbackSpeed(),
+                repeat = repo.repeatAyah(),
+                script = repo.scriptEdition(),
             )
         }
+        val ayah = loaded.ayah
+        val speed = loaded.speed
+        val repeat = loaded.repeat
+        val script = loaded.script
         val url = ayah.audioUrl
         if (url.isNullOrBlank()) {
             ui = PlayerUi.Error(
                 message = "Audio needs a connection. The ayah text is still here to read.",
                 ayah = ayah,
+                script = script,
             )
             onError("No audio URL (offline or API fallback)")
             return@LaunchedEffect
@@ -124,23 +146,41 @@ private fun AudioPlayerScreen(
                 setOnPreparedListener {
                     applyPlaybackSpeed(this, speed)
                     start()
-                    ui = PlayerUi.Ready(ayah, playing = true, speed = speed, repeating = repeat)
+                    ui = PlayerUi.Ready(
+                        ayah = ayah,
+                        playing = true,
+                        speed = speed,
+                        repeating = repeat,
+                        script = script,
+                    )
                 }
                 setOnCompletionListener {
                     if (!isLooping) {
-                        ui = PlayerUi.Ready(ayah, playing = false, speed = speed, repeating = repeat)
+                        ui = PlayerUi.Ready(
+                            ayah = ayah,
+                            playing = false,
+                            speed = speed,
+                            repeating = repeat,
+                            script = script,
+                        )
                     }
                 }
                 setOnErrorListener { _, _, _ ->
-                    ui = PlayerUi.Error("Playback failed", ayah)
+                    ui = PlayerUi.Error("Playback failed", ayah, script)
                     true
                 }
                 prepareAsync()
             }
             mediaPlayer = player
-            ui = PlayerUi.Ready(ayah, playing = false, speed = speed, repeating = repeat)
+            ui = PlayerUi.Ready(
+                ayah = ayah,
+                playing = false,
+                speed = speed,
+                repeating = repeat,
+                script = script,
+            )
         } catch (e: Exception) {
-            ui = PlayerUi.Error(e.message ?: "Could not start audio", ayah)
+            ui = PlayerUi.Error(e.message ?: "Could not start audio", ayah, script)
             onError(e.message ?: "Playback error")
         }
     }
@@ -173,14 +213,18 @@ private fun AudioPlayerScreen(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Spacer(Modifier.height(20.dp))
-                    Text(
+                    AyahArabicText(
                         text = state.ayah.textArabic,
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontSize = 28.sp,
-                            lineHeight = 44.sp,
-                        ),
-                        textAlign = TextAlign.Center,
+                        script = state.script,
                         modifier = Modifier.fillMaxWidth(),
+                        style = TextStyle(
+                            fontFamily = QuranFonts.UthmanicHafs,
+                            fontSize = 30.sp,
+                            lineHeight = 50.sp,
+                            textAlign = TextAlign.Center,
+                            textDirection = TextDirection.Rtl,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        ),
                     )
                     Spacer(Modifier.height(24.dp))
                     Text(
@@ -202,10 +246,18 @@ private fun AudioPlayerScreen(
                 }
                 is PlayerUi.Error -> {
                     state.ayah?.let { ayah ->
-                        Text(
+                        AyahArabicText(
                             text = ayah.textArabic,
-                            style = MaterialTheme.typography.headlineSmall,
-                            textAlign = TextAlign.Center,
+                            script = state.script,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = TextStyle(
+                                fontFamily = QuranFonts.UthmanicHafs,
+                                fontSize = 26.sp,
+                                lineHeight = 42.sp,
+                                textAlign = TextAlign.Center,
+                                textDirection = TextDirection.Rtl,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            ),
                         )
                         Spacer(Modifier.height(16.dp))
                     }

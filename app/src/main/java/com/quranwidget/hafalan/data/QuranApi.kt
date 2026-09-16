@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
  * Arabic text + verse audio for Sheikh Mishari Rashid Al-Afasy.
  *
  * Primary: Quran.com API v4
- * - Text: /quran/verses/uthmani or /quran/verses/uthmani_simple
+ * - Text: /quran/verses/qpc_hafs (Uthmani + KFGQPC) or /quran/verses/uthmani_tajweed
  * - Audio: recitation id 7 (Mishari Rashid al-`Afasy) via /recitations/7/by_ayah/{s}:{a}
  *   CDN base: https://verses.quran.com/
  *

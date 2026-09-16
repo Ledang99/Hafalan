@@ -8,10 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.widget.RemoteViews
+import androidx.core.content.ContextCompat
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.R
 import com.quranwidget.hafalan.audio.AyahPlaybackService
 import com.quranwidget.hafalan.data.SurahCatalog
+import com.quranwidget.hafalan.ui.TajweedMarkup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -106,18 +108,21 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_ayah_text, "…")
             } else {
                 val surah = SurahCatalog.get(state.surahNumber)
+                // One compact header line — frees vertical space for Arabic.
                 views.setTextViewText(
                     R.id.widget_surah,
-                    "${surah.nameTransliterated} · ${surah.nameArabic}",
+                    "${surah.nameTransliterated} · ${surah.nameArabic}  ·  " +
+                        "Ayah ${state.ayahNumber}/${surah.ayahCount}",
                 )
-                views.setTextViewText(
-                    R.id.widget_ayah_meta,
-                    "Ayah ${state.ayahNumber} / ${surah.ayahCount}",
-                )
-                views.setTextViewText(
-                    R.id.widget_ayah_text,
-                    state.cachedAyahText.ifBlank { "…" },
-                )
+                views.setTextViewText(R.id.widget_ayah_meta, "")
+                val raw = state.cachedAyahText.ifBlank { "…" }
+                val defaultColor = ContextCompat.getColor(context, R.color.widget_text)
+                val display: CharSequence = if (TajweedMarkup.looksLikeMarkup(raw)) {
+                    TajweedMarkup.toSpanned(raw, defaultColor)
+                } else {
+                    raw
+                }
+                views.setTextViewText(R.id.widget_ayah_text, display)
             }
 
             // Entire widget plays via foreground service — never opens MainActivity.

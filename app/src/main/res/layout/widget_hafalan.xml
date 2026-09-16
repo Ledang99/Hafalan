@@ -1,50 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Compact chrome + auto-sizing KFGQPC Arabic so the ayah fills most of a
+  typical 4×2 home-screen tile (matches live “before” screenshot density).
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/widget_background"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="3dp">
 
+    <!-- Single compact meta line (surah + ayah index). -->
     <TextView
         android:id="@+id/widget_surah"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"
+        android:includeFontPadding="false"
         android:maxLines="1"
         android:text="@string/widget_empty"
         android:textColor="@color/widget_muted"
-        android:textSize="12sp" />
+        android:textSize="10sp" />
 
+    <!-- Kept for id stability; height collapsed — meta lives in widget_surah. -->
     <TextView
         android:id="@+id/widget_ayah_meta"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
         android:textColor="@color/widget_muted"
-        android:textSize="12sp" />
+        android:textSize="1sp" />
 
     <TextView
         android:id="@+id/widget_ayah_text"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="2dp"
         android:layout_weight="1"
+        android:autoSizeMaxTextSize="40sp"
+        android:autoSizeMinTextSize="20sp"
+        android:autoSizeStepGranularity="1sp"
+        android:autoSizeTextType="uniform"
         android:ellipsize="end"
+        android:fontFamily="@font/uthmanic_hafs"
         android:gravity="center"
-        android:maxLines="4"
+        android:includeFontPadding="false"
+        android:lineSpacingExtra="0dp"
+        android:lineSpacingMultiplier="1.05"
+        android:maxLines="5"
         android:textAlignment="center"
         android:textColor="@color/widget_text"
         android:textDirection="rtl"
-        android:textSize="18sp" />
+        android:textSize="34sp" />
 
     <TextView
         android:id="@+id/widget_hint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="end"
+        android:includeFontPadding="false"
         android:text="@string/tap_to_play"
         android:textColor="@color/widget_muted"
-        android:textSize="11sp" />
+        android:textSize="9sp" />
 </LinearLayout>

@@ -15,7 +15,8 @@
     <string name="speed_2x">2×</string>
     <string name="script_edition">Arabic script</string>
     <string name="script_uthmani">Uthmani</string>
-    <string name="script_simple">Simple</string>
+    <string name="script_tajweed">Tajweed</string>
+    <string name="script_font_hint">King Fahad Complex</string>
     <string name="repeat_ayah">Repeat ayah</string>
     <string name="progress_title">Progress</string>
     <string name="playback_channel_name">Ayah playback</string>

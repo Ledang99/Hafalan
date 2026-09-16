@@ -40,7 +40,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quranwidget.hafalan.AppScreen
@@ -169,17 +171,21 @@ private fun HomeScreen(
                     CircularProgressIndicator(modifier = Modifier.padding(40.dp))
                 }
                 else -> {
-                    Text(
+                    AyahArabicText(
                         text = state.ayahText.ifBlank { "…" },
+                        script = state.scriptEdition,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(onClick = onPlay)
                             .padding(vertical = 16.dp),
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontSize = 30.sp,
-                            lineHeight = 52.sp,
+                        style = TextStyle(
+                            fontFamily = QuranFonts.UthmanicHafs,
+                            fontSize = 32.sp,
+                            lineHeight = 56.sp,
+                            textAlign = TextAlign.Center,
+                            textDirection = TextDirection.Rtl,
+                            color = MaterialTheme.colorScheme.onBackground,
                         ),
-                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -202,23 +208,17 @@ private fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
-            Row(
+            ScriptEditionChips(
+                selected = state.scriptEdition,
+                onSelect = onScriptEdition,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "King Fahad Complex",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ScriptEdition.entries.forEach { edition ->
-                    val selected = state.scriptEdition == edition
-                    FilterChip(
-                        selected = selected,
-                        onClick = { onScriptEdition(edition) },
-                        label = { Text(edition.label) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    )
-                }
-            }
+            )
 
             Spacer(Modifier.height(20.dp))
             Text(
@@ -397,6 +397,65 @@ private fun ProgressScreen(
             items(started, key = { it.surah.number }) { row ->
                 SurahProgressRow(row)
             }
+        }
+    }
+}
+
+@Composable
+fun AyahArabicText(
+    text: String,
+    script: ScriptEdition,
+    modifier: Modifier = Modifier,
+    style: TextStyle,
+) {
+    val color = style.color
+    if (script.usesTajweedMarkup && TajweedMarkup.looksLikeMarkup(text)) {
+        Text(
+            text = TajweedMarkup.toAnnotatedString(text, color),
+            modifier = modifier,
+            style = style,
+        )
+    } else {
+        Text(
+            text = if (TajweedMarkup.looksLikeMarkup(text)) {
+                TajweedMarkup.plainText(text)
+            } else {
+                text
+            },
+            modifier = modifier,
+            style = style,
+        )
+    }
+}
+
+@Composable
+private fun ScriptEditionChips(
+    selected: ScriptEdition,
+    onSelect: (ScriptEdition) -> Unit,
+) {
+    val chipColors = FilterChipDefaults.filterChipColors(
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        labelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+        selectedLabelColor = MaterialTheme.colorScheme.onBackground,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ScriptEdition.entries.forEach { edition ->
+            FilterChip(
+                selected = selected == edition,
+                onClick = { onSelect(edition) },
+                label = { Text(edition.label) },
+                colors = chipColors,
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selected == edition,
+                    borderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
+                    selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                ),
+            )
         }
     }
 }

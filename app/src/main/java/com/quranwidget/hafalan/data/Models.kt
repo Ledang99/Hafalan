@@ -48,21 +48,36 @@ object PlaybackSpeeds {
 
 /**
  * Arabic script editions from Quran.com API v4.
- * Default Uthmani (Uthmanic); Simple is uthmani_simple for easier reading.
+ *
+ * - Uthmani: QPC Hafs Unicode (`text_qpc_hafs`) rendered with shipped KFGQPC
+ *   Uthmanic Hafs (King Fahad Complex) font.
+ * - Tajweed: `text_uthmani_tajweed` with HTML color tags (best-effort in app + widget).
+ *
+ * Legacy ids `simple` / `uthmani_simple` map to Uthmani.
  */
 enum class ScriptEdition(
     val id: String,
     val label: String,
     val apiSegment: String,
     val jsonField: String,
+    val usesTajweedMarkup: Boolean = false,
 ) {
-    UTHMANI("uthmani", "Uthmani", "uthmani", "text_uthmani"),
-    SIMPLE("simple", "Simple", "uthmani_simple", "text_uthmani_simple"),
+    UTHMANI("uthmani", "Uthmani", "qpc_hafs", "text_qpc_hafs"),
+    TAJWEED(
+        id = "tajweed",
+        label = "Tajweed",
+        apiSegment = "uthmani_tajweed",
+        jsonField = "text_uthmani_tajweed",
+        usesTajweedMarkup = true,
+    ),
     ;
 
     companion object {
-        fun fromId(id: String?): ScriptEdition =
-            entries.firstOrNull { it.id == id } ?: UTHMANI
+        fun fromId(id: String?): ScriptEdition = when (id) {
+            TAJWEED.id -> TAJWEED
+            "simple", "uthmani_simple" -> UTHMANI
+            else -> entries.firstOrNull { it.id == id } ?: UTHMANI
+        }
     }
 }
 
