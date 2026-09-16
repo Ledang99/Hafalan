@@ -7,10 +7,11 @@ Help someone memorize one ayah at a time from a chosen surah, with a home-screen
 ## User flow
 
 1. Open app → pick surah (defaults to Al-Fatihah)
-2. See ayah 1 in Arabic
-3. Optional: tap ayah / Play / widget to hear Sheikh Mishari Rashid Al-Afasy for that ayah only
-4. Tap **Remembered** → ayah 2 (widget updates)
-5. If they skip a day without Remembered, the target advances one ayah per missed local day
+2. See ayah 1 in Arabic (Uthmani by default; switch to Simple in **Arabic script**)
+3. Optional: choose **1× / 1.5× / 2×** speed and **Repeat ayah**, then tap ayah / Listen / widget to hear Sheikh Mishari Rashid Al-Afasy (widget plays via foreground service — stays on the home screen)
+4. Tap **Remembered** → ayah recorded in progress history and target advances (widget updates)
+5. Open **Progress** (chart icon) for per-surah and overall remembered %
+6. If they skip a day without Remembered, the target advances one ayah per missed local day (does not add to remembered history)
 
 ## Tone (inspired by Tasmi, not a clone)
 
@@ -28,7 +29,7 @@ Calm, quiet companion energy: one ayah at a time, listen + read together (Al-Afa
 
 ## Technical notes
 
-- Persistence: DataStore Preferences
-- Text: Quran.com Uthmani; fallback Al-Fatihah bundle
-- Audio: Quran.com recitation id 7 (Al-Afasy) + verses.quran.com CDN
-- Widget: `AppWidgetProvider` + RemoteViews; tap opens `AudioPlayerActivity`
+- Persistence: DataStore Preferences (progress pointer, remembered ayah set, speed, script, repeat)
+- Text: Quran.com Uthmani / uthmani_simple; fallback Al-Fatihah bundle
+- Audio: Quran.com recitation id 7 (Al-Afasy) + verses.quran.com CDN; MediaPlayer `PlaybackParams` for 1×/1.5×/2×; `isLooping` when repeat is on
+- Widget: `AppWidgetProvider` + RemoteViews; tap starts `AyahPlaybackService` (mediaPlayback FGS), not `MainActivity`

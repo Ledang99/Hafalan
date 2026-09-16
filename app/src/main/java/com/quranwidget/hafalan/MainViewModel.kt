@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.quranwidget.hafalan.data.HafalanRepository
 import com.quranwidget.hafalan.data.HafalanState
 import com.quranwidget.hafalan.data.PlaybackSpeeds
+import com.quranwidget.hafalan.data.ProgressSummary
+import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +17,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+enum class AppScreen { Home, Progress }
+
 data class MainUiState(
     val hafalan: HafalanState = HafalanState(),
     val surah: SurahInfo = SurahCatalog.get(1),
@@ -23,6 +27,10 @@ data class MainUiState(
     val error: String? = null,
     val surahPickerOpen: Boolean = false,
     val playbackSpeed: Float = PlaybackSpeeds.NORMAL,
+    val scriptEdition: ScriptEdition = ScriptEdition.UTHMANI,
+    val repeatAyah: Boolean = false,
+    val progress: ProgressSummary = ProgressSummary(),
+    val screen: AppScreen = AppScreen.Home,
 )
 
 class MainViewModel(
@@ -31,22 +39,45 @@ class MainViewModel(
     private val loading = MutableStateFlow(true)
     private val error = MutableStateFlow<String?>(null)
     private val pickerOpen = MutableStateFlow(false)
+    private val screen = MutableStateFlow(AppScreen.Home)
 
-    val uiState: StateFlow<MainUiState> = combine(
+    private data class PrefBundle(
+        val hafalan: HafalanState,
+        val speed: Float,
+        val script: ScriptEdition,
+        val repeat: Boolean,
+        val progress: ProgressSummary,
+    )
+
+    private val prefsFlow = combine(
         repository.state,
         repository.playbackSpeed,
+        repository.scriptEdition,
+        repository.repeatAyah,
+        repository.progressSummary,
+    ) { hafalan, speed, script, repeat, progress ->
+        PrefBundle(hafalan, speed, script, repeat, progress)
+    }
+
+    val uiState: StateFlow<MainUiState> = combine(
+        prefsFlow,
         loading,
         error,
         pickerOpen,
-    ) { hafalan, speed, isLoading, err, open ->
+        screen,
+    ) { prefs, isLoading, err, open, currentScreen ->
         MainUiState(
-            hafalan = hafalan,
-            surah = SurahCatalog.get(hafalan.surahNumber),
-            ayahText = hafalan.cachedAyahText,
-            loading = isLoading && hafalan.cachedAyahText.isBlank(),
+            hafalan = prefs.hafalan,
+            surah = SurahCatalog.get(prefs.hafalan.surahNumber),
+            ayahText = prefs.hafalan.cachedAyahText,
+            loading = isLoading && prefs.hafalan.cachedAyahText.isBlank(),
             error = err,
             surahPickerOpen = open,
-            playbackSpeed = speed,
+            playbackSpeed = prefs.speed,
+            scriptEdition = prefs.script,
+            repeatAyah = prefs.repeat,
+            progress = prefs.progress,
+            screen = currentScreen,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
 
@@ -68,6 +99,14 @@ class MainViewModel(
 
     fun closeSurahPicker() {
         pickerOpen.value = false
+    }
+
+    fun showProgress() {
+        screen.value = AppScreen.Progress
+    }
+
+    fun showHome() {
+        screen.value = AppScreen.Home
     }
 
     fun selectSurah(number: Int) {
@@ -100,6 +139,25 @@ class MainViewModel(
     fun setPlaybackSpeed(speed: Float) {
         viewModelScope.launch {
             repository.setPlaybackSpeed(speed)
+        }
+    }
+
+    fun setScriptEdition(edition: ScriptEdition) {
+        viewModelScope.launch {
+            loading.value = true
+            error.value = null
+            runCatching {
+                repository.setScriptEdition(edition)
+            }.onFailure {
+                error.value = it.message ?: "Could not change script"
+            }
+            loading.value = false
+        }
+    }
+
+    fun setRepeatAyah(repeat: Boolean) {
+        viewModelScope.launch {
+            repository.setRepeatAyah(repeat)
         }
     }
 

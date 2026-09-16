@@ -6,10 +6,11 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.widget.RemoteViews
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.R
-import com.quranwidget.hafalan.audio.AudioPlayerActivity
+import com.quranwidget.hafalan.audio.AyahPlaybackService
 import com.quranwidget.hafalan.data.SurahCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +44,7 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 onUpdate(context, manager, ids)
             }
             ACTION_WIDGET_PLAY -> {
-                context.startActivity(headlessPlayIntent(context))
+                startPlayback(context)
             }
         }
     }
@@ -59,11 +60,33 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             context.sendBroadcast(intent)
         }
 
-        fun headlessPlayIntent(context: Context): Intent =
-            Intent(context, AudioPlayerActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(AudioPlayerActivity.EXTRA_HEADLESS, true)
+        fun startPlayback(context: Context) {
+            val intent = AyahPlaybackService.playIntent(context)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
             }
+        }
+
+        fun playPendingIntent(context: Context, appWidgetId: Int): PendingIntent {
+            val intent = AyahPlaybackService.playIntent(context)
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                PendingIntent.getForegroundService(
+                    context,
+                    appWidgetId,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+            } else {
+                PendingIntent.getService(
+                    context,
+                    appWidgetId,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+            }
+        }
 
         fun updateWidget(
             context: Context,
@@ -97,13 +120,8 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 )
             }
 
-            // Entire widget plays current ayah headlessly — never opens MainActivity.
-            val playPending = PendingIntent.getActivity(
-                context,
-                appWidgetId,
-                headlessPlayIntent(context),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+            // Entire widget plays via foreground service — never opens MainActivity.
+            val playPending = playPendingIntent(context, appWidgetId)
             views.setOnClickPendingIntent(R.id.widget_root, playPending)
             views.setOnClickPendingIntent(R.id.widget_surah, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_meta, playPending)

@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
  * Arabic text + verse audio for Sheikh Mishari Rashid Al-Afasy.
  *
  * Primary: Quran.com API v4
- * - Text: /quran/verses/uthmani
+ * - Text: /quran/verses/uthmani or /quran/verses/uthmani_simple
  * - Audio: recitation id 7 (Mishari Rashid al-`Afasy) via /recitations/7/by_ayah/{s}:{a}
  *   CDN base: https://verses.quran.com/
  *
@@ -21,17 +21,25 @@ class QuranApi(
         .readTimeout(20, TimeUnit.SECONDS)
         .build(),
 ) {
-    fun fetchAyah(surahNumber: Int, ayahNumber: Int): AyahContent {
+    fun fetchAyah(
+        surahNumber: Int,
+        ayahNumber: Int,
+        script: ScriptEdition = ScriptEdition.UTHMANI,
+    ): AyahContent {
         return try {
-            fetchFromQuranCom(surahNumber, ayahNumber)
+            fetchFromQuranCom(surahNumber, ayahNumber, script)
         } catch (_: Exception) {
             fetchFromAlQuranCloudAlafasy(surahNumber, ayahNumber)
         }
     }
 
-    fun fetchAyahOrFallback(surahNumber: Int, ayahNumber: Int): AyahContent {
+    fun fetchAyahOrFallback(
+        surahNumber: Int,
+        ayahNumber: Int,
+        script: ScriptEdition = ScriptEdition.UTHMANI,
+    ): AyahContent {
         return try {
-            fetchAyah(surahNumber, ayahNumber)
+            fetchAyah(surahNumber, ayahNumber, script)
         } catch (_: Exception) {
             OfflineFallback.ayah(surahNumber, ayahNumber)
                 ?: AyahContent(
@@ -43,9 +51,13 @@ class QuranApi(
         }
     }
 
-    private fun fetchFromQuranCom(surahNumber: Int, ayahNumber: Int): AyahContent {
+    private fun fetchFromQuranCom(
+        surahNumber: Int,
+        ayahNumber: Int,
+        script: ScriptEdition,
+    ): AyahContent {
         val verseKey = "$surahNumber:$ayahNumber"
-        val text = fetchUthmaniText(surahNumber, ayahNumber)
+        val text = fetchScriptText(surahNumber, ayahNumber, script)
         val audioUrl = fetchAlafasyAudioUrl(verseKey)
             ?: buildAlafasyCdnUrl(surahNumber, ayahNumber)
         return AyahContent(
@@ -56,9 +68,13 @@ class QuranApi(
         )
     }
 
-    private fun fetchUthmaniText(surahNumber: Int, ayahNumber: Int): String {
-        // Single-verse endpoint via verses/by_key
-        val url = "https://api.quran.com/api/v4/quran/verses/uthmani?verse_key=$surahNumber:$ayahNumber"
+    private fun fetchScriptText(
+        surahNumber: Int,
+        ayahNumber: Int,
+        script: ScriptEdition,
+    ): String {
+        val url =
+            "https://api.quran.com/api/v4/quran/verses/${script.apiSegment}?verse_key=$surahNumber:$ayahNumber"
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
@@ -73,7 +89,10 @@ class QuranApi(
             if (verses.length() == 0) {
                 throw IllegalStateException("No verse for $surahNumber:$ayahNumber")
             }
-            return verses.getJSONObject(0).getString("text_uthmani")
+            val verse = verses.getJSONObject(0)
+            return verse.optString(script.jsonField).takeIf { it.isNotBlank() }
+                ?: verse.optString("text_uthmani").takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("Missing text field for ${script.id}")
         }
     }
 

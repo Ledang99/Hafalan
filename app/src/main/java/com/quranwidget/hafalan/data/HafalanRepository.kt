@@ -8,6 +8,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -36,6 +37,32 @@ class HafalanRepository(
         initialValue = PlaybackSpeeds.NORMAL,
     )
 
+    val scriptEdition: StateFlow<ScriptEdition> = preferences.scriptEditionFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = ScriptEdition.UTHMANI,
+    )
+
+    val repeatAyah: StateFlow<Boolean> = preferences.repeatAyahFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = false,
+    )
+
+    val rememberedAyahs: StateFlow<Set<String>> = preferences.rememberedAyahsFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = emptySet(),
+    )
+
+    val progressSummary: StateFlow<ProgressSummary> = rememberedAyahs.map { keys ->
+        buildProgressSummary(keys)
+    }.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = ProgressSummary(),
+    )
+
     init {
         scope.launch {
             applyDailyAdvanceIfNeeded()
@@ -62,6 +89,8 @@ class HafalanRepository(
 
     suspend fun markRemembered() = mutex.withLock {
         val current = applyDailyAdvanceLocked(preferences.stateFlow.first())
+        // Persist this ayah in remembered history before advancing the active target.
+        preferences.addRememberedAyah(current.surahNumber, current.ayahNumber)
         val surah = SurahCatalog.get(current.surahNumber)
         val nextAyah = (current.ayahNumber + 1).coerceAtMost(surah.ayahCount)
         val today = LocalDate.now().toString()
@@ -92,8 +121,9 @@ class HafalanRepository(
 
     suspend fun loadAyahForPlayback(): AyahContent {
         val current = applyDailyAdvanceIfNeeded()
+        val script = preferences.scriptEdition()
         return withContext(Dispatchers.IO) {
-            api.fetchAyahOrFallback(current.surahNumber, current.ayahNumber)
+            api.fetchAyahOrFallback(current.surahNumber, current.ayahNumber, script)
         }
     }
 
@@ -101,6 +131,38 @@ class HafalanRepository(
 
     suspend fun setPlaybackSpeed(speed: Float) {
         preferences.setPlaybackSpeed(speed)
+    }
+
+    suspend fun scriptEdition(): ScriptEdition = preferences.scriptEdition()
+
+    suspend fun setScriptEdition(edition: ScriptEdition) = mutex.withLock {
+        preferences.setScriptEdition(edition)
+        refreshAyahTextLocked(preferences.stateFlow.first(), force = true)
+        notifyWidget()
+    }
+
+    suspend fun repeatAyah(): Boolean = preferences.repeatAyah()
+
+    suspend fun setRepeatAyah(repeat: Boolean) {
+        preferences.setRepeatAyah(repeat)
+    }
+
+    fun progressFor(keys: Set<String> = rememberedAyahs.value): ProgressSummary =
+        buildProgressSummary(keys)
+
+    private fun buildProgressSummary(keys: Set<String>): ProgressSummary {
+        val perSurah = SurahCatalog.all.map { surah ->
+            val count = keys.count { key ->
+                val parts = key.split(":")
+                parts.size == 2 && parts[0].toIntOrNull() == surah.number
+            }
+            SurahProgress(surah = surah, rememberedCount = count)
+        }
+        return ProgressSummary(
+            rememberedKeys = keys,
+            perSurah = perSurah,
+            overallRemembered = keys.size,
+        )
     }
 
     private suspend fun refreshAyahTextLocked(state: HafalanState, force: Boolean): AyahContent {
@@ -112,8 +174,9 @@ class HafalanRepository(
                 audioUrl = null,
             )
         }
+        val script = preferences.scriptEdition()
         val ayah = withContext(Dispatchers.IO) {
-            api.fetchAyahOrFallback(state.surahNumber, state.ayahNumber)
+            api.fetchAyahOrFallback(state.surahNumber, state.ayahNumber, script)
         }
         preferences.save(state.copy(cachedAyahText = ayah.textArabic))
         notifyWidget()
@@ -126,6 +189,7 @@ class HafalanRepository(
      *   was not marked remembered, advance one ayah (daily target rotation).
      * - After a remembered advance, that day does not also daily-advance; later missed days do.
      * - Stops at the last ayah of the surah.
+     * - Does NOT add to remembered history (only explicit Remembered does).
      */
     private fun applyDailyAdvanceLocked(state: HafalanState): HafalanState {
         val today = LocalDate.now()

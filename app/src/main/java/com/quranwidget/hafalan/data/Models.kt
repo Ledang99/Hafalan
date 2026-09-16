@@ -46,6 +46,50 @@ object PlaybackSpeeds {
     }
 }
 
+/**
+ * Arabic script editions from Quran.com API v4.
+ * Default Uthmani (Uthmanic); Simple is uthmani_simple for easier reading.
+ */
+enum class ScriptEdition(
+    val id: String,
+    val label: String,
+    val apiSegment: String,
+    val jsonField: String,
+) {
+    UTHMANI("uthmani", "Uthmani", "uthmani", "text_uthmani"),
+    SIMPLE("simple", "Simple", "uthmani_simple", "text_uthmani_simple"),
+    ;
+
+    companion object {
+        fun fromId(id: String?): ScriptEdition =
+            entries.firstOrNull { it.id == id } ?: UTHMANI
+    }
+}
+
+/** Verse key format used in remembered history: "surah:ayah". */
+fun ayahKey(surahNumber: Int, ayahNumber: Int): String = "$surahNumber:$ayahNumber"
+
+data class SurahProgress(
+    val surah: SurahInfo,
+    val rememberedCount: Int,
+) {
+    val percent: Float
+        get() = if (surah.ayahCount == 0) 0f else rememberedCount.toFloat() / surah.ayahCount
+}
+
+data class ProgressSummary(
+    val rememberedKeys: Set<String> = emptySet(),
+    val perSurah: List<SurahProgress> = emptyList(),
+    val overallRemembered: Int = 0,
+) {
+    val overallPercent: Float
+        get() = overallRemembered.toFloat() / TOTAL_QURAN_AYAHS
+
+    companion object {
+        const val TOTAL_QURAN_AYAHS = 6236
+    }
+}
+
 object SurahCatalog {
     val all: List<SurahInfo> = listOf(
         SurahInfo(1, "الفاتحة", "Al-Fatihah", 7),

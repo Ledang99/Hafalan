@@ -4,7 +4,6 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.os.Bundle
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,38 +33,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quranwidget.hafalan.HafalanApp
-import com.quranwidget.hafalan.R
 import com.quranwidget.hafalan.data.AyahContent
 import com.quranwidget.hafalan.data.PlaybackSpeeds
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.ui.HafalanTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.lifecycle.lifecycleScope
 
 /**
- * Plays the current ayah with Al-Afasy.
- *
- * When launched with [EXTRA_HEADLESS] (widget tap), uses a translucent theme and no UI —
- * audio starts immediately and the activity finishes when playback ends (or on error).
+ * In-app Listen screen with ayah text + Al-Afasy playback.
+ * Widget taps use [AyahPlaybackService] instead (no Activity / no black screen).
  */
 class AudioPlayerActivity : ComponentActivity() {
-    private var headlessPlayer: MediaPlayer? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        val headless = intent?.getBooleanExtra(EXTRA_HEADLESS, false) == true
-        if (headless) {
-            setTheme(R.style.Theme_QuranWidget_Translucent)
-        }
         super.onCreate(savedInstanceState)
-
-        if (headless) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
-            playHeadless()
-            return
-        }
-
         enableEdgeToEdge()
         setContent {
             HafalanTheme {
@@ -79,72 +60,8 @@ class AudioPlayerActivity : ComponentActivity() {
         }
     }
 
-    private fun playHeadless() {
-        lifecycleScope.launch {
-            try {
-                val (ayah, speed) = withContext(Dispatchers.IO) {
-                    val content = HafalanApp.get().repository.loadAyahForPlayback()
-                    val rate = HafalanApp.get().repository.playbackSpeed()
-                    content to rate
-                }
-                val url = ayah.audioUrl
-                if (url.isNullOrBlank()) {
-                    Toast.makeText(
-                        this@AudioPlayerActivity,
-                        "Audio needs a connection to listen.",
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                    finish()
-                    return@launch
-                }
-                val player = MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build(),
-                    )
-                    setDataSource(url)
-                    setOnPreparedListener {
-                        applyPlaybackSpeed(this, speed)
-                        start()
-                    }
-                    setOnCompletionListener {
-                        finish()
-                    }
-                    setOnErrorListener { _, _, _ ->
-                        Toast.makeText(
-                            this@AudioPlayerActivity,
-                            "Playback failed",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                        finish()
-                        true
-                    }
-                    prepareAsync()
-                }
-                headlessPlayer = player
-            } catch (e: Exception) {
-                Toast.makeText(
-                    this@AudioPlayerActivity,
-                    e.message ?: "Could not start audio",
-                    Toast.LENGTH_SHORT,
-                ).show()
-                finish()
-            }
-        }
-    }
-
-    override fun onDestroy() {
-        headlessPlayer?.run {
-            runCatching { stop() }
-            release()
-        }
-        headlessPlayer = null
-        super.onDestroy()
-    }
-
     companion object {
+        /** Kept for older PendingIntents; widget now starts [AyahPlaybackService]. */
         const val EXTRA_HEADLESS = "extra_headless"
     }
 }
@@ -158,7 +75,13 @@ internal fun applyPlaybackSpeed(player: MediaPlayer, speed: Float) {
 
 private sealed interface PlayerUi {
     data object Loading : PlayerUi
-    data class Ready(val ayah: AyahContent, val playing: Boolean, val speed: Float) : PlayerUi
+    data class Ready(
+        val ayah: AyahContent,
+        val playing: Boolean,
+        val speed: Float,
+        val repeating: Boolean,
+    ) : PlayerUi
+
     data class Error(val message: String, val ayah: AyahContent?) : PlayerUi
 }
 
@@ -171,10 +94,13 @@ private fun AudioPlayerScreen(
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
     LaunchedEffect(Unit) {
-        val (ayah, speed) = withContext(Dispatchers.IO) {
-            val content = HafalanApp.get().repository.loadAyahForPlayback()
-            val rate = HafalanApp.get().repository.playbackSpeed()
-            content to rate
+        val (ayah, speed, repeat) = withContext(Dispatchers.IO) {
+            val repo = HafalanApp.get().repository
+            Triple(
+                repo.loadAyahForPlayback(),
+                repo.playbackSpeed(),
+                repo.repeatAyah(),
+            )
         }
         val url = ayah.audioUrl
         if (url.isNullOrBlank()) {
@@ -194,13 +120,16 @@ private fun AudioPlayerScreen(
                         .build(),
                 )
                 setDataSource(url)
+                isLooping = repeat
                 setOnPreparedListener {
                     applyPlaybackSpeed(this, speed)
                     start()
-                    ui = PlayerUi.Ready(ayah, playing = true, speed = speed)
+                    ui = PlayerUi.Ready(ayah, playing = true, speed = speed, repeating = repeat)
                 }
                 setOnCompletionListener {
-                    ui = PlayerUi.Ready(ayah, playing = false, speed = speed)
+                    if (!isLooping) {
+                        ui = PlayerUi.Ready(ayah, playing = false, speed = speed, repeating = repeat)
+                    }
                 }
                 setOnErrorListener { _, _, _ ->
                     ui = PlayerUi.Error("Playback failed", ayah)
@@ -209,7 +138,7 @@ private fun AudioPlayerScreen(
                 prepareAsync()
             }
             mediaPlayer = player
-            ui = PlayerUi.Ready(ayah, playing = false, speed = speed)
+            ui = PlayerUi.Ready(ayah, playing = false, speed = speed, repeating = repeat)
         } catch (e: Exception) {
             ui = PlayerUi.Error(e.message ?: "Could not start audio", ayah)
             onError(e.message ?: "Playback error")
@@ -255,12 +184,16 @@ private fun AudioPlayerScreen(
                     )
                     Spacer(Modifier.height(24.dp))
                     Text(
-                        text = if (state.playing) {
-                            "Listening · Al-Afasy · ${PlaybackSpeeds.label(state.speed)}"
-                        } else {
-                            "Paused at the end — listen again anytime"
+                        text = when {
+                            state.playing && state.repeating ->
+                                "Looping · Al-Afasy · ${PlaybackSpeeds.label(state.speed)}"
+                            state.playing ->
+                                "Listening · Al-Afasy · ${PlaybackSpeeds.label(state.speed)}"
+                            else ->
+                                "Paused at the end — listen again anytime"
                         },
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) {

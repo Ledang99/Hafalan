@@ -13,4 +13,15 @@
     <string name="speed_1x">1×</string>
     <string name="speed_15x">1.5×</string>
     <string name="speed_2x">2×</string>
+    <string name="script_edition">Arabic script</string>
+    <string name="script_uthmani">Uthmani</string>
+    <string name="script_simple">Simple</string>
+    <string name="repeat_ayah">Repeat ayah</string>
+    <string name="progress_title">Progress</string>
+    <string name="playback_channel_name">Ayah playback</string>
+    <string name="playback_channel_desc">Quiet notification while an ayah is playing</string>
+    <string name="playback_preparing">Preparing Al-Afasy…</string>
+    <string name="playback_playing_alafasy">Playing · Al-Afasy</string>
+    <string name="playback_repeating_alafasy">Looping · Al-Afasy</string>
+    <string name="playback_stop">Stop</string>
 </resources>

@@ -32,6 +32,10 @@ class MainActivity : ComponentActivity() {
                     onRemembered = viewModel::markRemembered,
                     onPlay = ::openPlayer,
                     onPlaybackSpeed = viewModel::setPlaybackSpeed,
+                    onScriptEdition = viewModel::setScriptEdition,
+                    onRepeatAyah = viewModel::setRepeatAyah,
+                    onShowProgress = viewModel::showProgress,
+                    onShowHome = viewModel::showHome,
                     onRefresh = viewModel::refresh,
                 )
             }

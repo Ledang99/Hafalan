@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -25,6 +26,9 @@ class HafalanPreferences(private val context: Context) {
         val rememberedForCurrent = booleanPreferencesKey("remembered_for_current")
         val cachedAyahText = stringPreferencesKey("cached_ayah_text")
         val playbackSpeed = floatPreferencesKey("playback_speed")
+        val scriptEdition = stringPreferencesKey("script_edition")
+        val repeatAyah = booleanPreferencesKey("repeat_ayah")
+        val rememberedAyahs = stringSetPreferencesKey("remembered_ayahs")
     }
 
     val stateFlow: Flow<HafalanState> = context.hafalanDataStore.data.map { prefs ->
@@ -39,6 +43,18 @@ class HafalanPreferences(private val context: Context) {
 
     val playbackSpeedFlow: Flow<Float> = context.hafalanDataStore.data.map { prefs ->
         PlaybackSpeeds.normalize(prefs[Keys.playbackSpeed] ?: PlaybackSpeeds.NORMAL)
+    }
+
+    val scriptEditionFlow: Flow<ScriptEdition> = context.hafalanDataStore.data.map { prefs ->
+        ScriptEdition.fromId(prefs[Keys.scriptEdition])
+    }
+
+    val repeatAyahFlow: Flow<Boolean> = context.hafalanDataStore.data.map { prefs ->
+        prefs[Keys.repeatAyah] ?: false
+    }
+
+    val rememberedAyahsFlow: Flow<Set<String>> = context.hafalanDataStore.data.map { prefs ->
+        prefs[Keys.rememberedAyahs] ?: emptySet()
     }
 
     suspend fun save(state: HafalanState) {
@@ -57,5 +73,33 @@ class HafalanPreferences(private val context: Context) {
         }
     }
 
+    suspend fun setScriptEdition(edition: ScriptEdition) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.scriptEdition] = edition.id
+            // Force text refresh for the new script.
+            prefs[Keys.cachedAyahText] = ""
+        }
+    }
+
+    suspend fun setRepeatAyah(repeat: Boolean) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.repeatAyah] = repeat
+        }
+    }
+
+    suspend fun addRememberedAyah(surahNumber: Int, ayahNumber: Int) {
+        val key = ayahKey(surahNumber, ayahNumber)
+        context.hafalanDataStore.edit { prefs ->
+            val current = prefs[Keys.rememberedAyahs] ?: emptySet()
+            prefs[Keys.rememberedAyahs] = current + key
+        }
+    }
+
     suspend fun playbackSpeed(): Float = playbackSpeedFlow.first()
+
+    suspend fun scriptEdition(): ScriptEdition = scriptEditionFlow.first()
+
+    suspend fun repeatAyah(): Boolean = repeatAyahFlow.first()
+
+    suspend fun rememberedAyahs(): Set<String> = rememberedAyahsFlow.first()
 }
