@@ -3,6 +3,7 @@ package com.quranwidget.hafalan
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.quranwidget.hafalan.data.AppThemeMode
 import com.quranwidget.hafalan.data.HafalanRepository
 import com.quranwidget.hafalan.data.HafalanState
 import com.quranwidget.hafalan.data.PlaybackSpeeds
@@ -10,6 +11,7 @@ import com.quranwidget.hafalan.data.ProgressSummary
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
+import com.quranwidget.hafalan.data.WidgetAppearance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +33,8 @@ data class MainUiState(
     val repeatAyah: Boolean = false,
     val progress: ProgressSummary = ProgressSummary(),
     val screen: AppScreen = AppScreen.Home,
+    val appTheme: AppThemeMode = AppThemeMode.DAY,
+    val widgetAppearance: WidgetAppearance = WidgetAppearance.defaultFor(AppThemeMode.DAY),
 )
 
 class MainViewModel(
@@ -47,16 +51,42 @@ class MainViewModel(
         val script: ScriptEdition,
         val repeat: Boolean,
         val progress: ProgressSummary,
+        val theme: AppThemeMode,
+        val widget: WidgetAppearance,
     )
 
-    private val prefsFlow = combine(
+    private data class CorePrefs(
+        val hafalan: HafalanState,
+        val speed: Float,
+        val script: ScriptEdition,
+        val repeat: Boolean,
+        val progress: ProgressSummary,
+    )
+
+    private val corePrefsFlow = combine(
         repository.state,
         repository.playbackSpeed,
         repository.scriptEdition,
         repository.repeatAyah,
         repository.progressSummary,
     ) { hafalan, speed, script, repeat, progress ->
-        PrefBundle(hafalan, speed, script, repeat, progress)
+        CorePrefs(hafalan, speed, script, repeat, progress)
+    }
+
+    private val prefsFlow = combine(
+        corePrefsFlow,
+        repository.appTheme,
+        repository.widgetAppearance,
+    ) { core, theme, widget ->
+        PrefBundle(
+            hafalan = core.hafalan,
+            speed = core.speed,
+            script = core.script,
+            repeat = core.repeat,
+            progress = core.progress,
+            theme = theme,
+            widget = widget,
+        )
     }
 
     val uiState: StateFlow<MainUiState> = combine(
@@ -78,6 +108,8 @@ class MainViewModel(
             repeatAyah = prefs.repeat,
             progress = prefs.progress,
             screen = currentScreen,
+            appTheme = prefs.theme,
+            widgetAppearance = prefs.widget,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
 
@@ -158,6 +190,24 @@ class MainViewModel(
     fun setRepeatAyah(repeat: Boolean) {
         viewModelScope.launch {
             repository.setRepeatAyah(repeat)
+        }
+    }
+
+    fun setAppTheme(mode: AppThemeMode) {
+        viewModelScope.launch {
+            repository.setAppTheme(mode)
+        }
+    }
+
+    fun setWidgetBackgroundColor(rgb: Int) {
+        viewModelScope.launch {
+            repository.setWidgetBackgroundColor(rgb)
+        }
+    }
+
+    fun setWidgetBackgroundOpacity(percent: Int) {
+        viewModelScope.launch {
+            repository.setWidgetBackgroundOpacity(percent)
         }
     }
 

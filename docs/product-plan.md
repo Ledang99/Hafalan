@@ -29,7 +29,9 @@ Calm, quiet companion energy: one ayah at a time, listen + read together (Al-Afa
 
 ## Technical notes
 
-- Persistence: DataStore Preferences (progress pointer, remembered ayah set, speed, script, repeat)
+- Persistence: DataStore Preferences (progress pointer, remembered ayah set, speed, script, repeat, Day/Dark theme, widget bg color + opacity)
+- Widget: resizeable; Arabic auto-scales; customizable ARGB background
+- Version: 1.05 (shown on Progress)
 - Text: Quran.com Uthmani / uthmani_simple; fallback Al-Fatihah bundle
 - Audio: Quran.com recitation id 7 (Al-Afasy) + verses.quran.com CDN; MediaPlayer `PlaybackParams` for 1×/1.5×/2×; `isLooping` when repeat is on
 - Widget: `AppWidgetProvider` + RemoteViews; tap starts `AyahPlaybackService` (mediaPlayback FGS), not `MainActivity`

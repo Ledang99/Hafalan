@@ -63,6 +63,18 @@ class HafalanRepository(
         initialValue = ProgressSummary(),
     )
 
+    val appTheme: StateFlow<AppThemeMode> = preferences.appThemeFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = AppThemeMode.DAY,
+    )
+
+    val widgetAppearance: StateFlow<WidgetAppearance> = preferences.widgetAppearanceFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = WidgetAppearance.defaultFor(AppThemeMode.DAY),
+    )
+
     init {
         scope.launch {
             applyDailyAdvanceIfNeeded()
@@ -148,6 +160,25 @@ class HafalanRepository(
 
     suspend fun setRepeatAyah(repeat: Boolean) {
         preferences.setRepeatAyah(repeat)
+    }
+
+    suspend fun appTheme(): AppThemeMode = preferences.appTheme()
+
+    suspend fun setAppTheme(mode: AppThemeMode) {
+        preferences.setAppTheme(mode)
+        notifyWidget()
+    }
+
+    suspend fun widgetAppearance(): WidgetAppearance = preferences.widgetAppearance()
+
+    suspend fun setWidgetBackgroundColor(rgb: Int) {
+        preferences.setWidgetBackgroundColor(rgb)
+        notifyWidget()
+    }
+
+    suspend fun setWidgetBackgroundOpacity(percent: Int) {
+        preferences.setWidgetBackgroundOpacity(percent)
+        notifyWidget()
     }
 
     fun progressFor(keys: Set<String> = rememberedAyahs.value): ProgressSummary =

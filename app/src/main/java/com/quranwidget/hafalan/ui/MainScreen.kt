@@ -1,7 +1,10 @@
 package com.quranwidget.hafalan.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,9 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,19 +47,24 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quranwidget.hafalan.AppScreen
+import com.quranwidget.hafalan.BuildConfig
 import com.quranwidget.hafalan.MainUiState
+import com.quranwidget.hafalan.data.AppThemeMode
 import com.quranwidget.hafalan.data.PlaybackSpeeds
 import com.quranwidget.hafalan.data.ProgressSummary
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
 import com.quranwidget.hafalan.data.SurahProgress
+import com.quranwidget.hafalan.data.WidgetAppearance
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +79,9 @@ fun MainScreen(
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
     onRepeatAyah: (Boolean) -> Unit,
+    onAppTheme: (AppThemeMode) -> Unit,
+    onWidgetBgColor: (Int) -> Unit,
+    onWidgetBgOpacity: (Int) -> Unit,
     onShowProgress: () -> Unit,
     onShowHome: () -> Unit,
     onRefresh: () -> Unit,
@@ -86,6 +101,9 @@ fun MainScreen(
             onPlaybackSpeed = onPlaybackSpeed,
             onScriptEdition = onScriptEdition,
             onRepeatAyah = onRepeatAyah,
+            onAppTheme = onAppTheme,
+            onWidgetBgColor = onWidgetBgColor,
+            onWidgetBgOpacity = onWidgetBgOpacity,
             onShowProgress = onShowProgress,
             onRefresh = onRefresh,
         )
@@ -104,6 +122,9 @@ private fun HomeScreen(
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
     onRepeatAyah: (Boolean) -> Unit,
+    onAppTheme: (AppThemeMode) -> Unit,
+    onWidgetBgColor: (Int) -> Unit,
+    onWidgetBgOpacity: (Int) -> Unit,
     onShowProgress: () -> Unit,
     onRefresh: () -> Unit,
 ) {
@@ -222,6 +243,61 @@ private fun HomeScreen(
 
             Spacer(Modifier.height(20.dp))
             Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            ThemeModeChips(
+                selected = state.appTheme,
+                onSelect = onAppTheme,
+            )
+
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text = "Widget background",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            WidgetColorRow(
+                selectedRgb = state.widgetAppearance.backgroundColorRgb,
+                onSelect = onWidgetBgColor,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Opacity",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = "${state.widgetAppearance.opacityPercent}%",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
+                )
+            }
+            Slider(
+                value = state.widgetAppearance.opacityPercent.toFloat(),
+                onValueChange = { onWidgetBgOpacity(it.toInt()) },
+                valueRange = 0f..100f,
+                steps = 19,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = "0% transparent · 100% solid — applied to the home-screen widget",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(20.dp))
+            Text(
                 text = "Reciter speed",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
@@ -303,6 +379,7 @@ private fun HomeScreen(
             Text(
                 text = "Add the Hafalan ayah widget to your home screen for a quiet daily reminder. " +
                     "Tap the widget to listen right away — it won’t open the app. " +
+                    "Resize the widget and Arabic will scale to fill. " +
                     "No streaks, no pressure — just the next line.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
@@ -397,6 +474,17 @@ private fun ProgressScreen(
             items(started, key = { it.surah.number }) { row ->
                 SurahProgressRow(row)
             }
+            item {
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    text = "Version ${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }
@@ -455,6 +543,78 @@ private fun ScriptEditionChips(
                     borderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                     selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                 ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeModeChips(
+    selected: AppThemeMode,
+    onSelect: (AppThemeMode) -> Unit,
+) {
+    val chipColors = FilterChipDefaults.filterChipColors(
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        labelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+        selectedLabelColor = MaterialTheme.colorScheme.onBackground,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AppThemeMode.entries.forEach { mode ->
+            FilterChip(
+                selected = selected == mode,
+                onClick = { onSelect(mode) },
+                label = { Text(mode.label) },
+                colors = chipColors,
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selected == mode,
+                    borderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
+                    selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun WidgetColorRow(
+    selectedRgb: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        WidgetAppearance.presetColors.forEach { rgb ->
+            val color = Color(0xFF000000.toInt() or (rgb and 0x00FFFFFF))
+            val selected = (selectedRgb and 0x00FFFFFF) == (rgb and 0x00FFFFFF)
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(color)
+                    .then(
+                        if (selected) {
+                            Modifier.border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape,
+                            )
+                        } else {
+                            Modifier.border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                shape = CircleShape,
+                            )
+                        },
+                    )
+                    .clickable { onSelect(rgb) },
             )
         }
     }

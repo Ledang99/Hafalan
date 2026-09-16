@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,7 +55,8 @@ class AudioPlayerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            HafalanTheme {
+            val themeMode by HafalanApp.get().repository.appTheme.collectAsState()
+            HafalanTheme(themeMode = themeMode) {
                 AudioPlayerScreen(
                     onClose = { finish() },
                     onError = { message ->

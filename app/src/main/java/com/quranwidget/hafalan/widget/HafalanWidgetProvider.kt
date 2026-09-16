@@ -7,13 +7,16 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
+import android.util.TypedValue
 import android.widget.RemoteViews
-import androidx.core.content.ContextCompat
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.R
 import com.quranwidget.hafalan.audio.AyahPlaybackService
+import com.quranwidget.hafalan.data.AppThemeMode
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
+import com.quranwidget.hafalan.data.WidgetAppearance
 import com.quranwidget.hafalan.ui.TajweedMarkup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +43,16 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 pending.finish()
             }
         }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?,
+    ) {
+        // Re-push RemoteViews so Arabic auto-size remeasures for the new tile size.
+        updateWidget(context.applicationContext, appWidgetManager, appWidgetId)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -112,16 +125,30 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             val snapshot = runCatching {
                 kotlinx.coroutines.runBlocking {
                     val repo = HafalanApp.get().repository
-                    repo.currentState() to repo.scriptEdition()
+                    Triple(repo.currentState(), repo.scriptEdition(), repo.widgetAppearance())
                 }
             }.getOrNull()
+
+            val appearance = snapshot?.third ?: WidgetAppearance.defaultFor(AppThemeMode.DARK)
+            val darkSurface = appearance.isDarkSurface()
+            val textColor = if (darkSurface) 0xFFF8F4EC.toInt() else 0xFF102A1F.toInt()
+            val mutedColor = if (darkSurface) 0xFFB7C4B8.toInt() else 0xFF5A6B5E.toInt()
+
+            // ARGB background from persisted color + opacity.
+            views.setInt(R.id.widget_root, "setBackgroundColor", appearance.argb())
+            views.setTextColor(R.id.widget_surah, mutedColor)
+            views.setTextColor(R.id.widget_ayah_meta, mutedColor)
+            views.setTextColor(R.id.widget_ayah_text, textColor)
+            views.setTextColor(R.id.widget_hint, mutedColor)
+
+            applyAutoSizeForOptions(appWidgetManager, appWidgetId, views)
 
             if (snapshot == null) {
                 views.setTextViewText(R.id.widget_surah, context.getString(R.string.widget_empty))
                 views.setTextViewText(R.id.widget_ayah_meta, "")
                 views.setTextViewText(R.id.widget_ayah_text, "…")
             } else {
-                val (state, script) = snapshot
+                val (state, script, _) = snapshot
                 val surah = SurahCatalog.get(state.surahNumber)
                 views.setTextViewText(
                     R.id.widget_surah,
@@ -131,7 +158,7 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_ayah_meta, "")
                 views.setTextViewText(
                     R.id.widget_ayah_text,
-                    ayahDisplayText(context, state.cachedAyahText, script),
+                    ayahDisplayText(state.cachedAyahText, script, textColor, darkSurface),
                 )
             }
 
@@ -146,21 +173,50 @@ class HafalanWidgetProvider : AppWidgetProvider() {
         }
 
         /**
+         * Re-apply max lines and a size hint from current widget options so the
+         * XML `autoSizeTextType=uniform` remasures after a home-screen resize.
+         */
+        private fun applyAutoSizeForOptions(
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int,
+            views: RemoteViews,
+        ) {
+            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
+            val maxH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minH)
+            val heightDp = maxOf(minH, maxH).coerceAtLeast(40)
+
+            val maxSp = (heightDp / 2.6f).coerceIn(28f, 72f)
+            val maxLines = when {
+                heightDp >= 220 -> 8
+                heightDp >= 160 -> 6
+                else -> 5
+            }
+            views.setInt(R.id.widget_ayah_text, "setMaxLines", maxLines)
+            // Seed preferred size; TextView auto-size then fills remaining space.
+            views.setTextViewTextSize(
+                R.id.widget_ayah_text,
+                TypedValue.COMPLEX_UNIT_SP,
+                maxSp,
+            )
+        }
+
+        /**
          * Uthmani → plain QPC Hafs text (strip any leftover tajweed tags).
-         * Tajweed → colored spans on the dark widget surface.
+         * Tajweed → colored spans; palette follows light vs dark widget surface.
          * Font itself comes from `widget_hafalan.xml` (`@font/uthmanic_hafs`).
          */
         private fun ayahDisplayText(
-            context: Context,
             cached: String,
             script: ScriptEdition,
+            defaultColor: Int,
+            darkSurface: Boolean,
         ): CharSequence {
             val raw = cached.ifBlank { "…" }
-            val defaultColor = ContextCompat.getColor(context, R.color.widget_text)
             return when (script) {
                 ScriptEdition.TAJWEED -> {
                     if (TajweedMarkup.looksLikeMarkup(raw)) {
-                        TajweedMarkup.toSpanned(raw, defaultColor, forDarkSurface = true)
+                        TajweedMarkup.toSpanned(raw, defaultColor, forDarkSurface = darkSurface)
                     } else {
                         raw
                     }

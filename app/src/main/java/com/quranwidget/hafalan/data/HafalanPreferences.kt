@@ -29,6 +29,10 @@ class HafalanPreferences(private val context: Context) {
         val scriptEdition = stringPreferencesKey("script_edition")
         val repeatAyah = booleanPreferencesKey("repeat_ayah")
         val rememberedAyahs = stringSetPreferencesKey("remembered_ayahs")
+        val appTheme = stringPreferencesKey("app_theme")
+        val widgetBgColor = intPreferencesKey("widget_bg_color")
+        val widgetBgOpacity = intPreferencesKey("widget_bg_opacity")
+        val widgetBgCustomized = booleanPreferencesKey("widget_bg_customized")
     }
 
     val stateFlow: Flow<HafalanState> = context.hafalanDataStore.data.map { prefs ->
@@ -55,6 +59,24 @@ class HafalanPreferences(private val context: Context) {
 
     val rememberedAyahsFlow: Flow<Set<String>> = context.hafalanDataStore.data.map { prefs ->
         prefs[Keys.rememberedAyahs] ?: emptySet()
+    }
+
+    val appThemeFlow: Flow<AppThemeMode> = context.hafalanDataStore.data.map { prefs ->
+        AppThemeMode.fromId(prefs[Keys.appTheme])
+    }
+
+    val widgetAppearanceFlow: Flow<WidgetAppearance> = context.hafalanDataStore.data.map { prefs ->
+        val theme = AppThemeMode.fromId(prefs[Keys.appTheme])
+        val customized = prefs[Keys.widgetBgCustomized] ?: false
+        val default = WidgetAppearance.defaultFor(theme)
+        WidgetAppearance(
+            backgroundColorRgb = if (customized) {
+                prefs[Keys.widgetBgColor] ?: default.backgroundColorRgb
+            } else {
+                default.backgroundColorRgb
+            },
+            opacityPercent = (prefs[Keys.widgetBgOpacity] ?: 100).coerceIn(0, 100),
+        )
     }
 
     suspend fun save(state: HafalanState) {
@@ -95,6 +117,30 @@ class HafalanPreferences(private val context: Context) {
         }
     }
 
+    suspend fun setAppTheme(mode: AppThemeMode) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.appTheme] = mode.id
+            // When theme changes and user has not customized bg, reset color key
+            // so flow defaults track the new theme.
+            if (prefs[Keys.widgetBgCustomized] != true) {
+                prefs.remove(Keys.widgetBgColor)
+            }
+        }
+    }
+
+    suspend fun setWidgetBackgroundColor(rgb: Int) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.widgetBgColor] = rgb and 0x00FFFFFF
+            prefs[Keys.widgetBgCustomized] = true
+        }
+    }
+
+    suspend fun setWidgetBackgroundOpacity(percent: Int) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.widgetBgOpacity] = percent.coerceIn(0, 100)
+        }
+    }
+
     suspend fun playbackSpeed(): Float = playbackSpeedFlow.first()
 
     suspend fun scriptEdition(): ScriptEdition = scriptEditionFlow.first()
@@ -102,4 +148,8 @@ class HafalanPreferences(private val context: Context) {
     suspend fun repeatAyah(): Boolean = repeatAyahFlow.first()
 
     suspend fun rememberedAyahs(): Set<String> = rememberedAyahsFlow.first()
+
+    suspend fun appTheme(): AppThemeMode = appThemeFlow.first()
+
+    suspend fun widgetAppearance(): WidgetAppearance = widgetAppearanceFlow.first()
 }

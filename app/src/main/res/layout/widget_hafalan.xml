@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Compact chrome + auto-sizing KFGQPC Arabic so the ayah fills most of a
-  typical 4×2 home-screen tile (matches live “before” screenshot density).
+  Compact chrome + auto-sizing KFGQPC Arabic so the ayah fills most of the
+  home-screen tile. Size bounds are refreshed in code on resize.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -41,8 +41,8 @@
         android:layout_height="0dp"
         android:layout_marginTop="2dp"
         android:layout_weight="1"
-        android:autoSizeMaxTextSize="40sp"
-        android:autoSizeMinTextSize="20sp"
+        android:autoSizeMaxTextSize="56sp"
+        android:autoSizeMinTextSize="12sp"
         android:autoSizeStepGranularity="1sp"
         android:autoSizeTextType="uniform"
         android:ellipsize="end"
@@ -51,7 +51,7 @@
         android:includeFontPadding="false"
         android:lineSpacingExtra="0dp"
         android:lineSpacingMultiplier="1.05"
-        android:maxLines="5"
+        android:maxLines="8"
         android:textAlignment="center"
         android:textColor="@color/widget_text"
         android:textDirection="rtl"

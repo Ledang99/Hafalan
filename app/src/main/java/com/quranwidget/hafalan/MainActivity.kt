@@ -22,8 +22,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handlePlayIntent(intent)
         setContent {
-            HafalanTheme {
-                val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            HafalanTheme(themeMode = state.appTheme) {
                 MainScreen(
                     state = state,
                     onChooseSurah = viewModel::openSurahPicker,
@@ -34,6 +34,9 @@ class MainActivity : ComponentActivity() {
                     onPlaybackSpeed = viewModel::setPlaybackSpeed,
                     onScriptEdition = viewModel::setScriptEdition,
                     onRepeatAyah = viewModel::setRepeatAyah,
+                    onAppTheme = viewModel::setAppTheme,
+                    onWidgetBgColor = viewModel::setWidgetBackgroundColor,
+                    onWidgetBgOpacity = viewModel::setWidgetBackgroundOpacity,
                     onShowProgress = viewModel::showProgress,
                     onShowHome = viewModel::showHome,
                     onRefresh = viewModel::refresh,

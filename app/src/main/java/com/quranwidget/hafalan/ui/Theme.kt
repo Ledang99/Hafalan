@@ -1,11 +1,11 @@
 package com.quranwidget.hafalan.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.quranwidget.hafalan.data.AppThemeMode
 
 private val Green = Color(0xFF1B4332)
 private val GreenSoft = Color(0xFF2D6A4F)
@@ -35,9 +35,12 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
-fun HafalanTheme(content: @Composable () -> Unit) {
+fun HafalanTheme(
+    themeMode: AppThemeMode = AppThemeMode.DAY,
+    content: @Composable () -> Unit,
+) {
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+        colorScheme = if (themeMode.isDark) DarkColors else LightColors,
         content = content,
     )
 }

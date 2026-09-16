@@ -81,6 +81,69 @@ enum class ScriptEdition(
     }
 }
 
+/** App appearance: Day (light) or Dark. */
+enum class AppThemeMode(val id: String, val label: String) {
+    DAY("day", "Day"),
+    DARK("dark", "Dark"),
+    ;
+
+    val isDark: Boolean get() = this == DARK
+
+    companion object {
+        fun fromId(id: String?): AppThemeMode = when (id) {
+            DARK.id -> DARK
+            else -> DAY
+        }
+    }
+}
+
+/**
+ * Widget background color (RGB, alpha applied separately) + opacity 0–100.
+ * Defaults follow [AppThemeMode] until the user customizes.
+ */
+data class WidgetAppearance(
+    val backgroundColorRgb: Int = DEFAULT_DARK_BG,
+    val opacityPercent: Int = 100,
+) {
+    fun argb(): Int {
+        val a = ((opacityPercent.coerceIn(0, 100) / 100f) * 255f).toInt().coerceIn(0, 255)
+        return (a shl 24) or (backgroundColorRgb and 0x00FFFFFF)
+    }
+
+    /** Relative luminance of the opaque RGB (0 = black, 1 = white). */
+    fun luminance(): Float {
+        val r = ((backgroundColorRgb shr 16) and 0xFF) / 255f
+        val g = ((backgroundColorRgb shr 8) and 0xFF) / 255f
+        val b = (backgroundColorRgb and 0xFF) / 255f
+        return 0.2126f * r + 0.7152f * g + 0.0722f * b
+    }
+
+    fun isDarkSurface(): Boolean = luminance() < 0.45f
+
+    companion object {
+        const val DEFAULT_DARK_BG = 0x1B4332
+        const val DEFAULT_DAY_BG = 0xF8F4EC
+
+        val presetColors: List<Int> = listOf(
+            DEFAULT_DARK_BG,
+            0x12261D,
+            0x0B1A14,
+            DEFAULT_DAY_BG,
+            0xFFFBF5,
+            0xE8F5E9,
+            0xFFFFFF,
+            0x102A1F,
+            0x2D6A4F,
+            0x1A237E,
+        )
+
+        fun defaultFor(theme: AppThemeMode): WidgetAppearance = WidgetAppearance(
+            backgroundColorRgb = if (theme.isDark) DEFAULT_DARK_BG else DEFAULT_DAY_BG,
+            opacityPercent = 100,
+        )
+    }
+}
+
 /** Verse key format used in remembered history: "surah:ayah". */
 fun ayahKey(surahNumber: Int, ayahNumber: Int): String = "$surahNumber:$ayahNumber"
 
