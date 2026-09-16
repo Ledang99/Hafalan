@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hafalan</string>
+    <string name="widget_name">Hafalan ayah</string>
+    <string name="widget_description">A quiet daily ayah for memorization.</string>
+    <string name="remembered">Remembered</string>
+    <string name="play_ayah">Listen with Al-Afasy</string>
+    <string name="choose_surah">Pick a surah</string>
+    <string name="current_ayah">Current ayah</string>
+    <string name="widget_empty">Open Hafalan to pick a surah</string>
+    <string name="tap_to_play">Tap to listen</string>
+</resources>
