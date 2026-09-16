@@ -19,6 +19,11 @@
     <string name="script_font_hint">King Fahad Complex</string>
     <string name="repeat_ayah">Repeat ayah</string>
     <string name="progress_title">Progress</string>
+    <string name="backup">Backup</string>
+    <string name="restore">Restore</string>
+    <string name="backup_hint">Save or restore your remembered ayahs and current target as a JSON file.</string>
+    <string name="restore_confirm_title">Replace progress?</string>
+    <string name="restore_confirm_body">Restore will replace your remembered ayahs and current target with the backup file. This cannot be undone.</string>
     <string name="playback_channel_name">Ayah playback</string>
     <string name="playback_channel_desc">Quiet notification while an ayah is playing</string>
     <string name="playback_preparing">Preparing Al-Afasy…</string>

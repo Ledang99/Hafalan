@@ -1,5 +1,7 @@
 package com.quranwidget.hafalan
 
+import android.content.ContentResolver
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -12,12 +14,14 @@ import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
 import com.quranwidget.hafalan.data.WidgetAppearance
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class AppScreen { Home, Progress }
 
@@ -35,6 +39,8 @@ data class MainUiState(
     val screen: AppScreen = AppScreen.Home,
     val appTheme: AppThemeMode = AppThemeMode.DAY,
     val widgetAppearance: WidgetAppearance = WidgetAppearance.defaultFor(AppThemeMode.DAY),
+    val backupMessage: String? = null,
+    val backupBusy: Boolean = false,
 )
 
 class MainViewModel(
@@ -44,6 +50,8 @@ class MainViewModel(
     private val error = MutableStateFlow<String?>(null)
     private val pickerOpen = MutableStateFlow(false)
     private val screen = MutableStateFlow(AppScreen.Home)
+    private val backupMessage = MutableStateFlow<String?>(null)
+    private val backupBusy = MutableStateFlow(false)
 
     private data class PrefBundle(
         val hafalan: HafalanState,
@@ -89,27 +97,45 @@ class MainViewModel(
         )
     }
 
-    val uiState: StateFlow<MainUiState> = combine(
+    private data class ScreenBundle(
+        val prefs: PrefBundle,
+        val isLoading: Boolean,
+        val err: String?,
+        val open: Boolean,
+        val currentScreen: AppScreen,
+    )
+
+    private val screenFlow = combine(
         prefsFlow,
         loading,
         error,
         pickerOpen,
         screen,
     ) { prefs, isLoading, err, open, currentScreen ->
+        ScreenBundle(prefs, isLoading, err, open, currentScreen)
+    }
+
+    val uiState: StateFlow<MainUiState> = combine(
+        screenFlow,
+        backupMessage,
+        backupBusy,
+    ) { core, message, busy ->
         MainUiState(
-            hafalan = prefs.hafalan,
-            surah = SurahCatalog.get(prefs.hafalan.surahNumber),
-            ayahText = prefs.hafalan.cachedAyahText,
-            loading = isLoading && prefs.hafalan.cachedAyahText.isBlank(),
-            error = err,
-            surahPickerOpen = open,
-            playbackSpeed = prefs.speed,
-            scriptEdition = prefs.script,
-            repeatAyah = prefs.repeat,
-            progress = prefs.progress,
-            screen = currentScreen,
-            appTheme = prefs.theme,
-            widgetAppearance = prefs.widget,
+            hafalan = core.prefs.hafalan,
+            surah = SurahCatalog.get(core.prefs.hafalan.surahNumber),
+            ayahText = core.prefs.hafalan.cachedAyahText,
+            loading = core.isLoading && core.prefs.hafalan.cachedAyahText.isBlank(),
+            error = core.err,
+            surahPickerOpen = core.open,
+            playbackSpeed = core.prefs.speed,
+            scriptEdition = core.prefs.script,
+            repeatAyah = core.prefs.repeat,
+            progress = core.prefs.progress,
+            screen = core.currentScreen,
+            appTheme = core.prefs.theme,
+            widgetAppearance = core.prefs.widget,
+            backupMessage = message,
+            backupBusy = busy,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
 
@@ -208,6 +234,50 @@ class MainViewModel(
     fun setWidgetBackgroundOpacity(percent: Int) {
         viewModelScope.launch {
             repository.setWidgetBackgroundOpacity(percent)
+        }
+    }
+
+    fun clearBackupMessage() {
+        backupMessage.value = null
+    }
+
+    fun exportProgressBackup(uri: Uri, resolver: ContentResolver) {
+        viewModelScope.launch {
+            backupBusy.value = true
+            backupMessage.value = null
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    resolver.openOutputStream(uri)?.use { output ->
+                        repository.writeProgressBackup(output)
+                    } ?: error("Could not open file to write")
+                }
+            }.onSuccess {
+                backupMessage.value = "Backup saved."
+            }.onFailure {
+                backupMessage.value = it.message ?: "Could not save backup"
+            }
+            backupBusy.value = false
+        }
+    }
+
+    fun restoreProgressBackup(uri: Uri, resolver: ContentResolver) {
+        viewModelScope.launch {
+            backupBusy.value = true
+            backupMessage.value = null
+            loading.value = true
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    resolver.openInputStream(uri)?.use { input ->
+                        repository.restoreProgressBackup(input)
+                    } ?: error("Could not open backup file")
+                }
+            }.onSuccess {
+                backupMessage.value = "Progress restored."
+            }.onFailure {
+                backupMessage.value = it.message ?: "Could not restore backup"
+            }
+            loading.value = false
+            backupBusy.value = false
         }
     }
 

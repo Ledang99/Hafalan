@@ -1,5 +1,7 @@
 package com.quranwidget.hafalan.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +48,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,12 +66,14 @@ import com.quranwidget.hafalan.BuildConfig
 import com.quranwidget.hafalan.MainUiState
 import com.quranwidget.hafalan.data.AppThemeMode
 import com.quranwidget.hafalan.data.PlaybackSpeeds
+import com.quranwidget.hafalan.data.ProgressBackup
 import com.quranwidget.hafalan.data.ProgressSummary
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
 import com.quranwidget.hafalan.data.SurahProgress
 import com.quranwidget.hafalan.data.WidgetAppearance
+import android.net.Uri
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,11 +94,19 @@ fun MainScreen(
     onShowProgress: () -> Unit,
     onShowHome: () -> Unit,
     onRefresh: () -> Unit,
+    onBackupExport: (Uri) -> Unit,
+    onBackupRestore: (Uri) -> Unit,
+    onClearBackupMessage: () -> Unit,
 ) {
     when (state.screen) {
         AppScreen.Progress -> ProgressScreen(
             progress = state.progress,
+            backupMessage = state.backupMessage,
+            backupBusy = state.backupBusy,
             onBack = onShowHome,
+            onBackupExport = onBackupExport,
+            onBackupRestore = onBackupRestore,
+            onClearBackupMessage = onClearBackupMessage,
         )
         AppScreen.Home -> HomeScreen(
             state = state,
@@ -407,9 +424,64 @@ private fun HomeScreen(
 @Composable
 private fun ProgressScreen(
     progress: ProgressSummary,
+    backupMessage: String?,
+    backupBusy: Boolean,
     onBack: () -> Unit,
+    onBackupExport: (Uri) -> Unit,
+    onBackupRestore: (Uri) -> Unit,
+    onClearBackupMessage: () -> Unit,
 ) {
+    var confirmRestore by remember { mutableStateOf(false) }
+    val createBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ProgressBackup.MIME_TYPE),
+    ) { uri ->
+        if (uri != null) onBackupExport(uri)
+    }
+    val openBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) onBackupRestore(uri)
+    }
     val started = progress.perSurah.filter { it.rememberedCount > 0 }
+    if (confirmRestore) {
+        AlertDialog(
+            onDismissRequest = { confirmRestore = false },
+            title = { Text("Replace progress?") },
+            text = {
+                Text(
+                    "Restore will replace your remembered ayahs and current target " +
+                        "with the backup file. This cannot be undone.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmRestore = false
+                        openBackupLauncher.launch(arrayOf(ProgressBackup.MIME_TYPE, "text/*", "*/*"))
+                    },
+                ) {
+                    Text("Choose file")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRestore = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+    if (backupMessage != null) {
+        AlertDialog(
+            onDismissRequest = onClearBackupMessage,
+            title = { Text("Backup") },
+            text = { Text(backupMessage) },
+            confirmButton = {
+                TextButton(onClick = onClearBackupMessage) {
+                    Text("OK")
+                }
+            },
+        )
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -475,6 +547,49 @@ private fun ProgressScreen(
                 SurahProgressRow(row)
             }
             item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Backup",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Save or restore your remembered ayahs and current target as a JSON file.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            createBackupLauncher.launch(ProgressBackup.SUGGESTED_FILE_NAME)
+                        },
+                        enabled = !backupBusy,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Backup")
+                    }
+                    OutlinedButton(
+                        onClick = { confirmRestore = true },
+                        enabled = !backupBusy,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Restore")
+                    }
+                }
+                if (backupBusy) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
                 Text(
                     text = "Version ${BuildConfig.VERSION_NAME}",

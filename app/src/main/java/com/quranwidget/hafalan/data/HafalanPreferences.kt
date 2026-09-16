@@ -117,6 +117,36 @@ class HafalanPreferences(private val context: Context) {
         }
     }
 
+    /** Replace the entire remembered set (used by restore). */
+    suspend fun replaceRememberedAyahs(keys: Set<String>) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.rememberedAyahs] = keys
+        }
+    }
+
+    /**
+     * Apply a progress backup: replace remembered set and current hafalan target.
+     * Clears cached ayah text so the restored pointer is refreshed.
+     * Optionally restores script edition when [scriptEditionId] is present.
+     */
+    suspend fun restoreProgress(
+        rememberedKeys: Set<String>,
+        state: HafalanState,
+        scriptEditionId: String? = null,
+    ) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.rememberedAyahs] = rememberedKeys
+            prefs[Keys.surah] = state.surahNumber
+            prefs[Keys.ayah] = state.ayahNumber
+            prefs[Keys.lastActivityDate] = state.lastActivityDate
+            prefs[Keys.rememberedForCurrent] = state.rememberedForCurrent
+            prefs[Keys.cachedAyahText] = ""
+            if (!scriptEditionId.isNullOrBlank()) {
+                prefs[Keys.scriptEdition] = ScriptEdition.fromId(scriptEditionId).id
+            }
+        }
+    }
+
     suspend fun setAppTheme(mode: AppThemeMode) {
         context.hafalanDataStore.edit { prefs ->
             prefs[Keys.appTheme] = mode.id

@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.InputStream
+import java.io.OutputStream
 import java.time.LocalDate
 
 class HafalanRepository(
@@ -183,6 +185,52 @@ class HafalanRepository(
 
     fun progressFor(keys: Set<String> = rememberedAyahs.value): ProgressSummary =
         buildProgressSummary(keys)
+
+    /** Build a JSON backup of remembered ayahs + current hafalan target (+ optional script). */
+    suspend fun exportProgressBackup(): ProgressBackup {
+        val state = preferences.stateFlow.first()
+        val remembered = preferences.rememberedAyahs()
+        val script = preferences.scriptEdition()
+        return ProgressBackup(
+            rememberedAyahs = remembered,
+            surahNumber = state.surahNumber,
+            ayahNumber = state.ayahNumber,
+            lastActivityDate = state.lastActivityDate,
+            rememberedForCurrent = state.rememberedForCurrent,
+            scriptEditionId = script.id,
+        )
+    }
+
+    suspend fun writeProgressBackup(output: OutputStream) {
+        val json = exportProgressBackup().toJson()
+        withContext(Dispatchers.IO) {
+            output.bufferedWriter(Charsets.UTF_8).use { it.write(json) }
+        }
+    }
+
+    /**
+     * Replace local progress with the backup file contents, then refresh ayah text + widget.
+     */
+    suspend fun restoreProgressBackup(input: InputStream) = mutex.withLock {
+        val raw = withContext(Dispatchers.IO) {
+            input.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        }
+        val backup = ProgressBackup.fromJson(raw)
+        val restored = HafalanState(
+            surahNumber = backup.surahNumber,
+            ayahNumber = backup.ayahNumber,
+            lastActivityDate = backup.lastActivityDate.ifBlank { LocalDate.now().toString() },
+            rememberedForCurrent = backup.rememberedForCurrent,
+            cachedAyahText = "",
+        )
+        preferences.restoreProgress(
+            rememberedKeys = backup.rememberedAyahs,
+            state = restored,
+            scriptEditionId = backup.scriptEditionId,
+        )
+        refreshAyahTextLocked(restored, force = true, notify = false)
+        notifyWidget()
+    }
 
     private fun buildProgressSummary(keys: Set<String>): ProgressSummary {
         val perSurah = SurahCatalog.all.map { surah ->

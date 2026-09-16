@@ -40,6 +40,13 @@ class MainActivity : ComponentActivity() {
                     onShowProgress = viewModel::showProgress,
                     onShowHome = viewModel::showHome,
                     onRefresh = viewModel::refresh,
+                    onBackupExport = { uri ->
+                        viewModel.exportProgressBackup(uri, contentResolver)
+                    },
+                    onBackupRestore = { uri ->
+                        viewModel.restoreProgressBackup(uri, contentResolver)
+                    },
+                    onClearBackupMessage = viewModel::clearBackupMessage,
                 )
             }
         }

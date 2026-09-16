@@ -12,6 +12,7 @@ Tone is intentionally quiet — one small piece at a time (feel inspired by comp
 - Show current ayah with **Uthmani / Simple** script toggle (persisted; updates app + widget)
 - **Remembered** advances the active target, records the ayah in history, and updates the widget
 - **Progress** screen: per-surah % and overall % vs 6236 ayahs
+- **Backup / Restore** on Progress: export or replace memorization progress via a JSON file (SAF)
 - Daily advance when an ayah is left unmarked (see rule below)
 - **Reciter speed:** 1× / 1.5× / 2× chips near Listen (persisted; used by app + widget)
 - **Repeat ayah:** loop the current ayah while listening (app + widget service)

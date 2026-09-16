@@ -4,8 +4,8 @@
 Android home-screen widget for daily Quran hafalan, driven by a small companion app.
 
 ## Version
-- `versionName` **1.05** · `versionCode` **105**
-- Progress screen footer shows `Version 1.05`
+- `versionName` **1.06** · `versionCode` **106**
+- Progress screen footer shows `Version 1.06`
 
 ## Decisions
 - Platform: Android App Widget + main app
@@ -21,6 +21,7 @@ Android home-screen widget for daily Quran hafalan, driven by a small companion 
 - Widget typography: Arabic uses KFGQPC font, auto-sizes to fill the tile; surah/ayah meta collapsed to one small header line; tight padding; tap still plays via `AyahPlaybackService` (no black screen)
 - Widget script sync: chip changes refetch ayah text for the selected edition and **push RemoteViews immediately** (`pushUpdate`); widget reads `scriptEdition` and renders Uthmani (plain QPC Hafs) vs Tajweed (colored spans)
 - Progress: user picks surah; “Remembered” advances ayah **and** adds that ayah to a persisted remembered set; Progress screen shows per-surah % and overall % vs 6236; daily target still advances when not marked
+- Progress backup/restore: Progress screen **Backup** / **Restore** near the footer; exports JSON (`rememberedAyahs` + current surah/ayah pointer + optional script) via SAF CreateDocument; Restore confirms then replaces local progress via OpenDocument; percentages and current target match after restore
 - Playback speed: 1× / 1.5× / 2× chips in the app (near Listen); persisted in DataStore and applied to MediaPlayer for in-app Listen and widget playback
 - Repeat ayah: toggle loops current ayah during Listen + widget/service playback; persisted
 - Widget tap: starts `AyahPlaybackService` (foreground media notification) — stays on home screen; does **not** open `MainActivity` or a black/fullscreen Activity
