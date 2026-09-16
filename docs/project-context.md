@@ -12,6 +12,7 @@ Android home-screen widget for daily Quran hafalan, driven by a small companion 
   - **Tajweed** — Quran.com `uthmani_tajweed` with colored HTML tags (best-effort in app Compose + widget Spannable); same KFGQPC font
   - **Simple / IndoPak removed**; legacy pref ids `simple` / `uthmani_simple` map to Uthmani; choice persisted and refreshes app + widget
 - Widget typography: Arabic uses KFGQPC font, auto-sizes up to ~40sp, fills most of the tile; surah/ayah meta collapsed to one small header line; tight padding; tap still plays via `AyahPlaybackService` (no black screen)
+- Widget script sync: chip changes refetch ayah text for the selected edition and **push RemoteViews immediately** (`pushUpdate`); widget reads `scriptEdition` and renders Uthmani (plain QPC Hafs) vs Tajweed (colored spans, dark-surface palette)
 - Progress: user picks surah; “Remembered” advances ayah **and** adds that ayah to a persisted remembered set; Progress screen shows per-surah % and overall % vs 6236; daily target still advances when not marked
 - Playback speed: 1× / 1.5× / 2× chips in the app (near Listen); persisted in DataStore and applied to MediaPlayer for in-app Listen and widget playback
 - Repeat ayah: toggle loops current ayah during Listen + widget/service playback; persisted

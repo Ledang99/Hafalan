@@ -72,12 +72,7 @@ class HafalanWidgetProvider : AppWidgetProvider() {
         }
 
         fun requestUpdate(context: Context) {
-            // Direct push when possible; broadcast as a fallback wake-up.
             pushUpdate(context)
-            val intent = Intent(context, HafalanWidgetProvider::class.java).apply {
-                action = ACTION_WIDGET_REFRESH
-            }
-            context.applicationContext.sendBroadcast(intent)
         }
 
         fun startPlayback(context: Context) {
