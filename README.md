@@ -12,7 +12,9 @@ Tone is intentionally quiet — one small piece at a time (feel inspired by comp
 - Show current ayah (Arabic Uthmani text)
 - **Remembered** advances to the next ayah and updates the widget
 - Daily advance when an ayah is left unmarked (see rule below)
-- Tap widget or ayah to play Al-Afasy audio for that ayah
+- **Reciter speed:** 1× / 1.5× / 2× chips near Listen (persisted; used by app + widget)
+- Tap widget to play Al-Afasy for the current ayah **without opening the app UI**
+- Tap ayah / Listen in the app for the same audio (with a simple player screen)
 - Local persistence via DataStore (no auth, no backend)
 - Offline fallback text for Al-Fatihah if the network fails
 
@@ -59,11 +61,11 @@ Widget preview requires a physical device or emulator home screen; CI/headless e
 | Path | Role |
 |------|------|
 | `app/src/main/java/.../MainActivity.kt` | Compose app entry |
-| `app/src/main/java/.../ui/MainScreen.kt` | Surah picker, ayah, Remembered, Play |
-| `app/src/main/java/.../widget/HafalanWidgetProvider.kt` | Home-screen App Widget |
-| `app/src/main/java/.../data/HafalanRepository.kt` | Progress + daily advance |
+| `app/src/main/java/.../ui/MainScreen.kt` | Surah picker, ayah, speed chips, Remembered, Play |
+| `app/src/main/java/.../widget/HafalanWidgetProvider.kt` | Home-screen App Widget (tap → headless play) |
+| `app/src/main/java/.../data/HafalanRepository.kt` | Progress + daily advance + playback speed |
 | `app/src/main/java/.../data/QuranApi.kt` | Quran.com text + Al-Afasy audio |
-| `app/src/main/java/.../audio/AudioPlayerActivity.kt` | MediaPlayer playback |
+| `app/src/main/java/.../audio/AudioPlayerActivity.kt` | MediaPlayer (+ headless mode for widget) |
 | `app/src/main/res/layout/widget_hafalan.xml` | Widget RemoteViews layout |
 
 ## Stack
