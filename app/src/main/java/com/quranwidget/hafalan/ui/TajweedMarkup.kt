@@ -26,7 +26,7 @@ object TajweedMarkup {
     )
     private val anyTag = Regex("""<[^>]+>""")
 
-    /** Standard-ish Quran.com tajweed palette. */
+    /** Standard Quran.com tajweed palette (light / in-app). */
     private val classColors = mapOf(
         "ham_wasl" to 0xFF9E9E9E.toInt(),
         "laam_shamsiyah" to 0xFF9E9E9E.toInt(),
@@ -45,6 +45,27 @@ object TajweedMarkup {
         "idgh_mut" to 0xFF169200.toInt(),
         "idgh_wo_ghn" to 0xFF169200.toInt(),
         "ghn" to 0xFFFF7E1E.toInt(),
+    )
+
+    /** Brighter tajweed colors for the dark green home-screen widget. */
+    private val classColorsDarkSurface = mapOf(
+        "ham_wasl" to 0xFFBDBDBD.toInt(),
+        "laam_shamsiyah" to 0xFFBDBDBD.toInt(),
+        "slnt" to 0xFFBDBDBD.toInt(),
+        "madda_normal" to 0xFF8CB4FF.toInt(),
+        "madda_permissible" to 0xFFA0ABFF.toInt(),
+        "madda_necessary" to 0xFFC5D0FF.toInt(),
+        "madda_obligatory" to 0xFF9EB6FF.toInt(),
+        "qlq" to 0xFFFF8A80.toInt(),
+        "ikhf" to 0xFFFF7AD9.toInt(),
+        "ikhf_shfw" to 0xFFFF7AD9.toInt(),
+        "iqlab" to 0xFF7ADFFF.toInt(),
+        "idghm_shfw" to 0xFF7DFF9A.toInt(),
+        "idgh_ghn" to 0xFF7DFF9A.toInt(),
+        "idgh_mus" to 0xFF7DFF9A.toInt(),
+        "idgh_mut" to 0xFF7DFF9A.toInt(),
+        "idgh_wo_ghn" to 0xFF7DFF9A.toInt(),
+        "ghn" to 0xFFFFB347.toInt(),
     )
 
     fun plainText(markup: String): String {
@@ -104,8 +125,13 @@ object TajweedMarkup {
     }
 
     /** Spannable for App Widget RemoteViews / TextView. */
-    fun toSpanned(markup: String, defaultColor: Int): CharSequence {
+    fun toSpanned(
+        markup: String,
+        defaultColor: Int,
+        forDarkSurface: Boolean = false,
+    ): CharSequence {
         if (!markup.contains('<')) return markup
+        val colors = if (forDarkSurface) classColorsDarkSurface else classColors
         val builder = SpannableStringBuilder()
         var remaining = markup
         while (remaining.isNotEmpty()) {
@@ -133,7 +159,7 @@ object TajweedMarkup {
                 val start = builder.length
                 builder.append(body)
                 builder.setSpan(
-                    ForegroundColorSpan(classColors[cls] ?: defaultColor),
+                    ForegroundColorSpan(colors[cls] ?: defaultColor),
                     start,
                     builder.length,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
@@ -142,7 +168,7 @@ object TajweedMarkup {
                 val start = builder.length
                 builder.append(next.groupValues[1])
                 builder.setSpan(
-                    ForegroundColorSpan(0xFF888888.toInt()),
+                    ForegroundColorSpan(0xFFB0B0B0.toInt()),
                     start,
                     builder.length,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,

@@ -135,9 +135,12 @@ class HafalanRepository(
 
     suspend fun scriptEdition(): ScriptEdition = preferences.scriptEdition()
 
-    suspend fun setScriptEdition(edition: ScriptEdition) = mutex.withLock {
-        preferences.setScriptEdition(edition)
-        refreshAyahTextLocked(preferences.stateFlow.first(), force = true)
+    suspend fun setScriptEdition(edition: ScriptEdition) {
+        mutex.withLock {
+            preferences.setScriptEdition(edition)
+            refreshAyahTextLocked(preferences.stateFlow.first(), force = true, notify = false)
+        }
+        // Push RemoteViews after the lock so the widget always sees the new script + text.
         notifyWidget()
     }
 
@@ -165,7 +168,11 @@ class HafalanRepository(
         )
     }
 
-    private suspend fun refreshAyahTextLocked(state: HafalanState, force: Boolean): AyahContent {
+    private suspend fun refreshAyahTextLocked(
+        state: HafalanState,
+        force: Boolean,
+        notify: Boolean = true,
+    ): AyahContent {
         if (!force && state.cachedAyahText.isNotBlank()) {
             return AyahContent(
                 surahNumber = state.surahNumber,
@@ -179,7 +186,9 @@ class HafalanRepository(
             api.fetchAyahOrFallback(state.surahNumber, state.ayahNumber, script)
         }
         preferences.save(state.copy(cachedAyahText = ayah.textArabic))
-        notifyWidget()
+        if (notify) {
+            notifyWidget()
+        }
         return ayah
     }
 
@@ -222,6 +231,7 @@ class HafalanRepository(
     }
 
     private fun notifyWidget() {
-        HafalanWidgetProvider.requestUpdate(appContext)
+        // Direct RemoteViews push (no ephemeral provider coroutine race).
+        HafalanWidgetProvider.pushUpdate(appContext)
     }
 }
