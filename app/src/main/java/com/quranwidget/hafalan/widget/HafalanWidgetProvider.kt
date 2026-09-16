@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import com.quranwidget.hafalan.HafalanApp
-import com.quranwidget.hafalan.MainActivity
 import com.quranwidget.hafalan.R
 import com.quranwidget.hafalan.audio.AudioPlayerActivity
 import com.quranwidget.hafalan.data.SurahCatalog
@@ -44,10 +43,7 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 onUpdate(context, manager, ids)
             }
             ACTION_WIDGET_PLAY -> {
-                val play = Intent(context, AudioPlayerActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(play)
+                context.startActivity(headlessPlayIntent(context))
             }
         }
     }
@@ -63,6 +59,12 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             context.sendBroadcast(intent)
         }
 
+        fun headlessPlayIntent(context: Context): Intent =
+            Intent(context, AudioPlayerActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(AudioPlayerActivity.EXTRA_HEADLESS, true)
+            }
+
         fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -70,7 +72,6 @@ class HafalanWidgetProvider : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.widget_hafalan)
             val state = runCatching {
-                // Blocking read is OK on IO dispatcher callers; for sync path use cache.
                 kotlinx.coroutines.runBlocking {
                     HafalanApp.get().repository.currentState()
                 }
@@ -96,29 +97,18 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 )
             }
 
-            val playIntent = Intent(context, AudioPlayerActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
+            // Entire widget plays current ayah headlessly — never opens MainActivity.
             val playPending = PendingIntent.getActivity(
                 context,
                 appWidgetId,
-                playIntent,
+                headlessPlayIntent(context),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             views.setOnClickPendingIntent(R.id.widget_root, playPending)
+            views.setOnClickPendingIntent(R.id.widget_surah, playPending)
+            views.setOnClickPendingIntent(R.id.widget_ayah_meta, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_text, playPending)
-
-            // Long-press / empty area also opens app as fallback via title tap alternate:
-            val openApp = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            val openPending = PendingIntent.getActivity(
-                context,
-                appWidgetId + 1000,
-                openApp,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-            views.setOnClickPendingIntent(R.id.widget_surah, openPending)
+            views.setOnClickPendingIntent(R.id.widget_hint, playPending)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }

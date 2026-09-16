@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.quranwidget.hafalan.data.HafalanRepository
 import com.quranwidget.hafalan.data.HafalanState
+import com.quranwidget.hafalan.data.PlaybackSpeeds
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ data class MainUiState(
     val loading: Boolean = true,
     val error: String? = null,
     val surahPickerOpen: Boolean = false,
+    val playbackSpeed: Float = PlaybackSpeeds.NORMAL,
 )
 
 class MainViewModel(
@@ -32,10 +34,11 @@ class MainViewModel(
 
     val uiState: StateFlow<MainUiState> = combine(
         repository.state,
+        repository.playbackSpeed,
         loading,
         error,
         pickerOpen,
-    ) { hafalan, isLoading, err, open ->
+    ) { hafalan, speed, isLoading, err, open ->
         MainUiState(
             hafalan = hafalan,
             surah = SurahCatalog.get(hafalan.surahNumber),
@@ -43,6 +46,7 @@ class MainViewModel(
             loading = isLoading && hafalan.cachedAyahText.isBlank(),
             error = err,
             surahPickerOpen = open,
+            playbackSpeed = speed,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
 
@@ -90,6 +94,12 @@ class MainViewModel(
                 error.value = it.message ?: "Could not advance"
             }
             loading.value = false
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        viewModelScope.launch {
+            repository.setPlaybackSpeed(speed)
         }
     }
 

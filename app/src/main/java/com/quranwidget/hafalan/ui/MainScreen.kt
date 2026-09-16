@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quranwidget.hafalan.MainUiState
+import com.quranwidget.hafalan.data.PlaybackSpeeds
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
 
@@ -50,6 +53,7 @@ fun MainScreen(
     onSurahSelected: (Int) -> Unit,
     onRemembered: () -> Unit,
     onPlay: () -> Unit,
+    onPlaybackSpeed: (Float) -> Unit,
     onRefresh: () -> Unit,
 ) {
     Scaffold(
@@ -139,6 +143,31 @@ fun MainScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+            Text(
+                text = "Reciter speed",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PlaybackSpeeds.all.forEach { speed ->
+                    val selected = PlaybackSpeeds.normalize(state.playbackSpeed) == speed
+                    FilterChip(
+                        selected = selected,
+                        onClick = { onPlaybackSpeed(speed) },
+                        label = { Text(PlaybackSpeeds.label(speed)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             Button(
                 onClick = onPlay,
                 modifier = Modifier.fillMaxWidth(),
@@ -168,7 +197,8 @@ fun MainScreen(
             Spacer(Modifier.height(28.dp))
             Text(
                 text = "Add the Hafalan ayah widget to your home screen for a quiet daily reminder. " +
-                    "Tap the widget to listen. No streaks, no pressure — just the next line.",
+                    "Tap the widget to listen right away — it won’t open the app. " +
+                    "No streaks, no pressure — just the next line.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,

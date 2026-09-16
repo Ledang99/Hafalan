@@ -30,6 +30,12 @@ class HafalanRepository(
         initialValue = HafalanState(),
     )
 
+    val playbackSpeed: StateFlow<Float> = preferences.playbackSpeedFlow.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = PlaybackSpeeds.NORMAL,
+    )
+
     init {
         scope.launch {
             applyDailyAdvanceIfNeeded()
@@ -89,6 +95,12 @@ class HafalanRepository(
         return withContext(Dispatchers.IO) {
             api.fetchAyahOrFallback(current.surahNumber, current.ayahNumber)
         }
+    }
+
+    suspend fun playbackSpeed(): Float = preferences.playbackSpeed()
+
+    suspend fun setPlaybackSpeed(speed: Float) {
+        preferences.setPlaybackSpeed(speed)
     }
 
     private suspend fun refreshAyahTextLocked(state: HafalanState, force: Boolean): AyahContent {

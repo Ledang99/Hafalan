@@ -9,4 +9,8 @@
     <string name="current_ayah">Current ayah</string>
     <string name="widget_empty">Open Hafalan to pick a surah</string>
     <string name="tap_to_play">Tap to listen</string>
+    <string name="reciter_speed">Reciter speed</string>
+    <string name="speed_1x">1×</string>
+    <string name="speed_15x">1.5×</string>
+    <string name="speed_2x">2×</string>
 </resources>

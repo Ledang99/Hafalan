@@ -25,6 +25,27 @@ data class HafalanState(
     val cachedAyahText: String = "",
 )
 
+/** Supported Al-Afasy playback rates (persisted and applied for app + widget). */
+object PlaybackSpeeds {
+    const val NORMAL = 1.0f
+    const val FAST = 1.5f
+    const val FASTER = 2.0f
+
+    val all: List<Float> = listOf(NORMAL, FAST, FASTER)
+
+    fun normalize(speed: Float): Float = when {
+        speed >= 1.75f -> FASTER
+        speed >= 1.25f -> FAST
+        else -> NORMAL
+    }
+
+    fun label(speed: Float): String = when (normalize(speed)) {
+        FAST -> "1.5×"
+        FASTER -> "2×"
+        else -> "1×"
+    }
+}
+
 object SurahCatalog {
     val all: List<SurahInfo> = listOf(
         SurahInfo(1, "الفاتحة", "Al-Fatihah", 7),

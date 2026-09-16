@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
                     onSurahSelected = viewModel::selectSurah,
                     onRemembered = viewModel::markRemembered,
                     onPlay = ::openPlayer,
+                    onPlaybackSpeed = viewModel::setPlaybackSpeed,
                     onRefresh = viewModel::refresh,
                 )
             }

@@ -5,10 +5,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.hafalanDataStore: DataStore<Preferences> by preferencesDataStore(
@@ -22,6 +24,7 @@ class HafalanPreferences(private val context: Context) {
         val lastActivityDate = stringPreferencesKey("last_activity_date")
         val rememberedForCurrent = booleanPreferencesKey("remembered_for_current")
         val cachedAyahText = stringPreferencesKey("cached_ayah_text")
+        val playbackSpeed = floatPreferencesKey("playback_speed")
     }
 
     val stateFlow: Flow<HafalanState> = context.hafalanDataStore.data.map { prefs ->
@@ -34,6 +37,10 @@ class HafalanPreferences(private val context: Context) {
         )
     }
 
+    val playbackSpeedFlow: Flow<Float> = context.hafalanDataStore.data.map { prefs ->
+        PlaybackSpeeds.normalize(prefs[Keys.playbackSpeed] ?: PlaybackSpeeds.NORMAL)
+    }
+
     suspend fun save(state: HafalanState) {
         context.hafalanDataStore.edit { prefs ->
             prefs[Keys.surah] = state.surahNumber
@@ -43,4 +50,12 @@ class HafalanPreferences(private val context: Context) {
             prefs[Keys.cachedAyahText] = state.cachedAyahText
         }
     }
+
+    suspend fun setPlaybackSpeed(speed: Float) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.playbackSpeed] = PlaybackSpeeds.normalize(speed)
+        }
+    }
+
+    suspend fun playbackSpeed(): Float = playbackSpeedFlow.first()
 }
