@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -238,37 +240,76 @@ private fun HomeScreen(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = "Arabic script",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+            // Play + Remembered sit directly under the ayah (tight gap).
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onPlay,
                 modifier = Modifier.fillMaxWidth(),
-            )
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null)
+                Text(
+                    text = "  Listen with Al-Afasy",
+                    modifier = Modifier.padding(vertical = 6.dp),
+                )
+            }
             Spacer(Modifier.height(8.dp))
-            ScriptEditionChips(
-                selected = state.scriptEdition,
-                onSelect = onScriptEdition,
+            val currentKey = "${state.hafalan.surahNumber}:${state.hafalan.ayahNumber}"
+            val atLastAyah = state.hafalan.ayahNumber >= state.surah.ayahCount
+            val lastAlreadyRemembered =
+                atLastAyah && currentKey in state.progress.rememberedKeys
+            OutlinedButton(
+                onClick = onRemembered,
+                enabled = !state.loading && !lastAlreadyRemembered,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = if (lastAlreadyRemembered) {
+                        "Surah complete — well done"
+                    } else {
+                        "Remembered"
+                    },
+                    modifier = Modifier.padding(vertical = 6.dp),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Repeat ayah",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = "Loop while listening (app + widget)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+                    )
+                }
+                Switch(
+                    checked = state.repeatAyah,
+                    onCheckedChange = onRepeatAyah,
+                )
+            }
+
+            // Options below play controls.
+            Spacer(Modifier.height(20.dp))
+            HomeOptionsRow(
+                script = state.scriptEdition,
+                onScript = onScriptEdition,
+                theme = state.appTheme,
+                onTheme = onAppTheme,
+                playbackSpeed = state.playbackSpeed,
+                onPlaybackSpeed = onPlaybackSpeed,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "King Fahad Complex",
+                text = "King Fahad Complex · script · theme · speed",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = "Appearance",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            ThemeModeChips(
-                selected = state.appTheme,
-                onSelect = onAppTheme,
             )
 
             Spacer(Modifier.height(20.dp))
@@ -313,85 +354,6 @@ private fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = "Reciter speed",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                PlaybackSpeeds.all.forEach { speed ->
-                    val selected = PlaybackSpeeds.normalize(state.playbackSpeed) == speed
-                    FilterChip(
-                        selected = selected,
-                        onClick = { onPlaybackSpeed(speed) },
-                        label = { Text(PlaybackSpeeds.label(speed)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Repeat ayah",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = "Loop while listening (app + widget)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-                    )
-                }
-                Switch(
-                    checked = state.repeatAyah,
-                    onCheckedChange = onRepeatAyah,
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onPlay,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                Text(
-                    text = "  Listen with Al-Afasy",
-                    modifier = Modifier.padding(vertical = 6.dp),
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            val currentKey = "${state.hafalan.surahNumber}:${state.hafalan.ayahNumber}"
-            val atLastAyah = state.hafalan.ayahNumber >= state.surah.ayahCount
-            val lastAlreadyRemembered =
-                atLastAyah && currentKey in state.progress.rememberedKeys
-            OutlinedButton(
-                onClick = onRemembered,
-                enabled = !state.loading && !lastAlreadyRemembered,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = if (lastAlreadyRemembered) {
-                        "Surah complete — well done"
-                    } else {
-                        "Remembered"
-                    },
-                    modifier = Modifier.padding(vertical = 6.dp),
-                )
-            }
             Spacer(Modifier.height(28.dp))
             Text(
                 text = "Add the Hafalan ayah widget to your home screen for a quiet daily reminder. " +
@@ -631,10 +593,15 @@ fun AyahArabicText(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ScriptEditionChips(
-    selected: ScriptEdition,
-    onSelect: (ScriptEdition) -> Unit,
+private fun HomeOptionsRow(
+    script: ScriptEdition,
+    onScript: (ScriptEdition) -> Unit,
+    theme: AppThemeMode,
+    onTheme: (AppThemeMode) -> Unit,
+    playbackSpeed: Float,
+    onPlaybackSpeed: (Float) -> Unit,
 ) {
     val chipColors = FilterChipDefaults.filterChipColors(
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
@@ -642,51 +609,51 @@ private fun ScriptEditionChips(
         selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
         selectedLabelColor = MaterialTheme.colorScheme.onBackground,
     )
-    Row(
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         ScriptEdition.entries.forEach { edition ->
+            val selected = script == edition
             FilterChip(
-                selected = selected == edition,
-                onClick = { onSelect(edition) },
+                selected = selected,
+                onClick = { onScript(edition) },
                 label = { Text(edition.label) },
                 colors = chipColors,
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
-                    selected = selected == edition,
+                    selected = selected,
                     borderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                     selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                 ),
             )
         }
-    }
-}
-
-@Composable
-private fun ThemeModeChips(
-    selected: AppThemeMode,
-    onSelect: (AppThemeMode) -> Unit,
-) {
-    val chipColors = FilterChipDefaults.filterChipColors(
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-        labelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
-        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
-        selectedLabelColor = MaterialTheme.colorScheme.onBackground,
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
         AppThemeMode.entries.forEach { mode ->
+            val selected = theme == mode
             FilterChip(
-                selected = selected == mode,
-                onClick = { onSelect(mode) },
+                selected = selected,
+                onClick = { onTheme(mode) },
                 label = { Text(mode.label) },
                 colors = chipColors,
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
-                    selected = selected == mode,
+                    selected = selected,
+                    borderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
+                    selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                ),
+            )
+        }
+        PlaybackSpeeds.all.forEach { speed ->
+            val selected = PlaybackSpeeds.normalize(playbackSpeed) == speed
+            FilterChip(
+                selected = selected,
+                onClick = { onPlaybackSpeed(speed) },
+                label = { Text(PlaybackSpeeds.label(speed)) },
+                colors = chipColors,
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selected,
                     borderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                     selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                 ),
