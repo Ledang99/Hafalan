@@ -45,10 +45,10 @@ class HafalanRepository(
         initialValue = ScriptEdition.UTHMANI,
     )
 
-    val repeatAyah: StateFlow<Boolean> = preferences.repeatAyahFlow.stateIn(
+    val repeatCount: StateFlow<Int> = preferences.repeatCountFlow.stateIn(
         scope = scope,
         started = SharingStarted.Eagerly,
-        initialValue = false,
+        initialValue = RepeatCounts.OFF,
     )
 
     val rememberedAyahs: StateFlow<Set<String>> = preferences.rememberedAyahsFlow.stateIn(
@@ -158,10 +158,10 @@ class HafalanRepository(
         notifyWidget()
     }
 
-    suspend fun repeatAyah(): Boolean = preferences.repeatAyah()
+    suspend fun repeatCount(): Int = preferences.repeatCount()
 
-    suspend fun setRepeatAyah(repeat: Boolean) {
-        preferences.setRepeatAyah(repeat)
+    suspend fun setRepeatCount(count: Int) {
+        preferences.setRepeatCount(count)
     }
 
     suspend fun appTheme(): AppThemeMode = preferences.appTheme()

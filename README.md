@@ -8,11 +8,11 @@ Tone is intentionally quiet — one small piece at a time (feel inspired by comp
 
 ## Download APK (latest)
 
-**v1.08** debug APK:
+**v1.09** debug APK:
 
-- [Download hafalan-v1.08.apk](https://github.com/Ledang99/Hafalan/raw/main/releases/hafalan-v1.08.apk)
+- [Download hafalan-v1.09.apk](https://github.com/Ledang99/Hafalan/raw/main/releases/hafalan-v1.09.apk)
 
-On GitHub: open [`releases/hafalan-v1.08.apk`](https://github.com/Ledang99/Hafalan/blob/main/releases/hafalan-v1.08.apk) → **Download raw file**.
+On GitHub: open [`releases/hafalan-v1.09.apk`](https://github.com/Ledang99/Hafalan/blob/main/releases/hafalan-v1.09.apk) → **Download raw file**.
 
 Install: allow install from this source if Android asks, then add the **Hafalan ayah** widget from the home-screen widget picker.
 
@@ -25,7 +25,7 @@ Install: allow install from this source if Android asks, then add the **Hafalan 
 - **Backup / Restore** on Progress: export or replace memorization progress via a JSON file (SAF)
 - Daily advance when an ayah is left unmarked (see rule below)
 - **Reciter speed:** 1× / 1.5× / 2× chips near Listen (persisted; used by app + widget)
-- **Repeat ayah:** loop the current ayah while listening (app + widget service)
+- **Repeat count:** Off / 3× / 6× / 9× chips near play controls (persisted; plays that many times then stops — app + widget; notification Stop cancels mid-run)
 - Tap widget to play Al-Afasy via a **foreground media notification** (stays on home screen; no black Activity)
 - Tap ayah / Listen in the app for the same audio (simple player screen)
 - Local persistence via DataStore (no auth, no backend)

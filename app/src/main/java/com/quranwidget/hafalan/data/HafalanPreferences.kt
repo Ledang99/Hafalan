@@ -27,7 +27,8 @@ class HafalanPreferences(private val context: Context) {
         val cachedAyahText = stringPreferencesKey("cached_ayah_text")
         val playbackSpeed = floatPreferencesKey("playback_speed")
         val scriptEdition = stringPreferencesKey("script_edition")
-        val repeatAyah = booleanPreferencesKey("repeat_ayah")
+        val repeatAyah = booleanPreferencesKey("repeat_ayah") // legacy; migrated to repeatCount
+        val repeatCount = intPreferencesKey("repeat_count")
         val rememberedAyahs = stringSetPreferencesKey("remembered_ayahs")
         val appTheme = stringPreferencesKey("app_theme")
         val widgetBgColor = intPreferencesKey("widget_bg_color")
@@ -53,8 +54,12 @@ class HafalanPreferences(private val context: Context) {
         ScriptEdition.fromId(prefs[Keys.scriptEdition])
     }
 
-    val repeatAyahFlow: Flow<Boolean> = context.hafalanDataStore.data.map { prefs ->
-        prefs[Keys.repeatAyah] ?: false
+    val repeatCountFlow: Flow<Int> = context.hafalanDataStore.data.map { prefs ->
+        prefs[Keys.repeatCount]?.let { RepeatCounts.normalize(it) }
+            ?: when (prefs[Keys.repeatAyah]) {
+                true -> RepeatCounts.THREE
+                else -> RepeatCounts.OFF
+            }
     }
 
     val rememberedAyahsFlow: Flow<Set<String>> = context.hafalanDataStore.data.map { prefs ->
@@ -103,9 +108,11 @@ class HafalanPreferences(private val context: Context) {
         }
     }
 
-    suspend fun setRepeatAyah(repeat: Boolean) {
+    suspend fun setRepeatCount(count: Int) {
         context.hafalanDataStore.edit { prefs ->
-            prefs[Keys.repeatAyah] = repeat
+            prefs[Keys.repeatCount] = RepeatCounts.normalize(count)
+            // Clear legacy boolean so migration does not fight the new key.
+            prefs.remove(Keys.repeatAyah)
         }
     }
 
@@ -175,7 +182,7 @@ class HafalanPreferences(private val context: Context) {
 
     suspend fun scriptEdition(): ScriptEdition = scriptEditionFlow.first()
 
-    suspend fun repeatAyah(): Boolean = repeatAyahFlow.first()
+    suspend fun repeatCount(): Int = repeatCountFlow.first()
 
     suspend fun rememberedAyahs(): Set<String> = rememberedAyahsFlow.first()
 

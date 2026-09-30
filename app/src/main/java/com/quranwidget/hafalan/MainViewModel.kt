@@ -10,6 +10,7 @@ import com.quranwidget.hafalan.data.HafalanRepository
 import com.quranwidget.hafalan.data.HafalanState
 import com.quranwidget.hafalan.data.PlaybackSpeeds
 import com.quranwidget.hafalan.data.ProgressSummary
+import com.quranwidget.hafalan.data.RepeatCounts
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
@@ -34,7 +35,7 @@ data class MainUiState(
     val surahPickerOpen: Boolean = false,
     val playbackSpeed: Float = PlaybackSpeeds.NORMAL,
     val scriptEdition: ScriptEdition = ScriptEdition.UTHMANI,
-    val repeatAyah: Boolean = false,
+    val repeatCount: Int = RepeatCounts.OFF,
     val progress: ProgressSummary = ProgressSummary(),
     val screen: AppScreen = AppScreen.Home,
     val appTheme: AppThemeMode = AppThemeMode.DAY,
@@ -57,7 +58,7 @@ class MainViewModel(
         val hafalan: HafalanState,
         val speed: Float,
         val script: ScriptEdition,
-        val repeat: Boolean,
+        val repeat: Int,
         val progress: ProgressSummary,
         val theme: AppThemeMode,
         val widget: WidgetAppearance,
@@ -67,7 +68,7 @@ class MainViewModel(
         val hafalan: HafalanState,
         val speed: Float,
         val script: ScriptEdition,
-        val repeat: Boolean,
+        val repeat: Int,
         val progress: ProgressSummary,
     )
 
@@ -75,7 +76,7 @@ class MainViewModel(
         repository.state,
         repository.playbackSpeed,
         repository.scriptEdition,
-        repository.repeatAyah,
+        repository.repeatCount,
         repository.progressSummary,
     ) { hafalan, speed, script, repeat, progress ->
         CorePrefs(hafalan, speed, script, repeat, progress)
@@ -129,7 +130,7 @@ class MainViewModel(
             surahPickerOpen = core.open,
             playbackSpeed = core.prefs.speed,
             scriptEdition = core.prefs.script,
-            repeatAyah = core.prefs.repeat,
+            repeatCount = core.prefs.repeat,
             progress = core.prefs.progress,
             screen = core.currentScreen,
             appTheme = core.prefs.theme,
@@ -213,9 +214,9 @@ class MainViewModel(
         }
     }
 
-    fun setRepeatAyah(repeat: Boolean) {
+    fun setRepeatCount(count: Int) {
         viewModelScope.launch {
-            repository.setRepeatAyah(repeat)
+            repository.setRepeatCount(count)
         }
     }
 

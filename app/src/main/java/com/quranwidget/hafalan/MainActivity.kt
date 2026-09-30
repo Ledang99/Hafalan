@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
                     onPlay = ::openPlayer,
                     onPlaybackSpeed = viewModel::setPlaybackSpeed,
                     onScriptEdition = viewModel::setScriptEdition,
-                    onRepeatAyah = viewModel::setRepeatAyah,
+                    onRepeatCount = viewModel::setRepeatCount,
                     onAppTheme = viewModel::setAppTheme,
                     onWidgetBgColor = viewModel::setWidgetBackgroundColor,
                     onWidgetBgOpacity = viewModel::setWidgetBackgroundOpacity,

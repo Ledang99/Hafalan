@@ -18,6 +18,7 @@ import androidx.core.app.ServiceCompat
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.MainActivity
 import com.quranwidget.hafalan.R
+import com.quranwidget.hafalan.data.RepeatCounts
 import com.quranwidget.hafalan.data.SurahCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,12 +67,12 @@ class AyahPlaybackService : Service() {
 
         scope.launch {
             try {
-                val (ayah, speed, repeat) = withContext(Dispatchers.IO) {
+                val (ayah, speed, repeatCount) = withContext(Dispatchers.IO) {
                     val repo = HafalanApp.get().repository
                     Triple(
                         repo.loadAyahForPlayback(),
                         repo.playbackSpeed(),
-                        repo.repeatAyah(),
+                        repo.repeatCount(),
                     )
                 }
                 val url = ayah.audioUrl
@@ -92,8 +93,11 @@ class AyahPlaybackService : Service() {
                     NOTIFICATION_ID,
                     buildNotification(
                         title = label,
-                        text = if (repeat) {
-                            getString(R.string.playback_repeating_alafasy)
+                        text = if (RepeatCounts.isRepeating(repeatCount)) {
+                            getString(
+                                R.string.playback_repeating_count_alafasy,
+                                RepeatCounts.label(repeatCount),
+                            )
                         } else {
                             getString(R.string.playback_playing_alafasy)
                         },
@@ -101,6 +105,9 @@ class AyahPlaybackService : Service() {
                 )
 
                 releasePlayer()
+                val counted = CountedAyahPlayer(repeatCount) {
+                    stopPlayback()
+                }
                 val mediaPlayer = MediaPlayer().apply {
                     setAudioAttributes(
                         AudioAttributes.Builder()
@@ -109,16 +116,7 @@ class AyahPlaybackService : Service() {
                             .build(),
                     )
                     setDataSource(url)
-                    isLooping = repeat
-                    setOnPreparedListener {
-                        applyPlaybackSpeed(this, speed)
-                        start()
-                    }
-                    setOnCompletionListener {
-                        if (!isLooping) {
-                            stopPlayback()
-                        }
-                    }
+                    counted.attach(this, speed)
                     setOnErrorListener { _, _, _ ->
                         Toast.makeText(
                             this@AyahPlaybackService,

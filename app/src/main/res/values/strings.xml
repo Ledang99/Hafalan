@@ -17,7 +17,11 @@
     <string name="script_uthmani">Uthmani</string>
     <string name="script_tajweed">Tajweed</string>
     <string name="script_font_hint">King Fahad Complex</string>
-    <string name="repeat_ayah">Repeat ayah</string>
+    <string name="repeat_ayah">Repeat</string>
+    <string name="repeat_off">Off</string>
+    <string name="repeat_3x">3×</string>
+    <string name="repeat_6x">6×</string>
+    <string name="repeat_9x">9×</string>
     <string name="progress_title">Progress</string>
     <string name="backup">Backup</string>
     <string name="restore">Restore</string>
@@ -28,6 +32,7 @@
     <string name="playback_channel_desc">Quiet notification while an ayah is playing</string>
     <string name="playback_preparing">Preparing Al-Afasy…</string>
     <string name="playback_playing_alafasy">Playing · Al-Afasy</string>
-    <string name="playback_repeating_alafasy">Looping · Al-Afasy</string>
+    <string name="playback_repeating_alafasy">Repeating · Al-Afasy</string>
+    <string name="playback_repeating_count_alafasy">Repeating %1$s · Al-Afasy</string>
     <string name="playback_stop">Stop</string>
 </resources>

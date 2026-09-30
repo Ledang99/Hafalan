@@ -47,6 +47,33 @@ object PlaybackSpeeds {
 }
 
 /**
+ * Finite ayah repeat counts for Listen + widget playback.
+ * [OFF] plays once; 3 / 6 / 9 play that many times then stop. No infinite loop.
+ */
+object RepeatCounts {
+    const val OFF = 1
+    const val THREE = 3
+    const val SIX = 6
+    const val NINE = 9
+
+    val all: List<Int> = listOf(OFF, THREE, SIX, NINE)
+
+    fun normalize(count: Int): Int = when (count) {
+        THREE, SIX, NINE -> count
+        else -> OFF
+    }
+
+    fun label(count: Int): String = when (normalize(count)) {
+        THREE -> "3×"
+        SIX -> "6×"
+        NINE -> "9×"
+        else -> "Off"
+    }
+
+    fun isRepeating(count: Int): Boolean = normalize(count) > OFF
+}
+
+/**
  * Arabic script editions from Quran.com API v4.
  *
  * - Uthmani: QPC Hafs Unicode (`text_qpc_hafs`) rendered with shipped KFGQPC

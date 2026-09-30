@@ -43,7 +43,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -70,6 +69,7 @@ import com.quranwidget.hafalan.data.AppThemeMode
 import com.quranwidget.hafalan.data.PlaybackSpeeds
 import com.quranwidget.hafalan.data.ProgressBackup
 import com.quranwidget.hafalan.data.ProgressSummary
+import com.quranwidget.hafalan.data.RepeatCounts
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.SurahInfo
@@ -89,7 +89,7 @@ fun MainScreen(
     onPlay: () -> Unit,
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
-    onRepeatAyah: (Boolean) -> Unit,
+    onRepeatCount: (Int) -> Unit,
     onAppTheme: (AppThemeMode) -> Unit,
     onWidgetBgColor: (Int) -> Unit,
     onWidgetBgOpacity: (Int) -> Unit,
@@ -119,7 +119,7 @@ fun MainScreen(
             onPlay = onPlay,
             onPlaybackSpeed = onPlaybackSpeed,
             onScriptEdition = onScriptEdition,
-            onRepeatAyah = onRepeatAyah,
+            onRepeatCount = onRepeatCount,
             onAppTheme = onAppTheme,
             onWidgetBgColor = onWidgetBgColor,
             onWidgetBgOpacity = onWidgetBgOpacity,
@@ -140,7 +140,7 @@ private fun HomeScreen(
     onPlay: () -> Unit,
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
-    onRepeatAyah: (Boolean) -> Unit,
+    onRepeatCount: (Int) -> Unit,
     onAppTheme: (AppThemeMode) -> Unit,
     onWidgetBgColor: (Int) -> Unit,
     onWidgetBgOpacity: (Int) -> Unit,
@@ -272,27 +272,23 @@ private fun HomeScreen(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Row(
+            Text(
+                text = "Repeat",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Repeat ayah",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = "Loop while listening (app + widget)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-                    )
-                }
-                Switch(
-                    checked = state.repeatAyah,
-                    onCheckedChange = onRepeatAyah,
-                )
-            }
+            )
+            Spacer(Modifier.height(6.dp))
+            RepeatCountRow(
+                repeatCount = state.repeatCount,
+                onRepeatCount = onRepeatCount,
+            )
+            Text(
+                text = "Stops after the chosen count · app + widget",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             // Options below play controls.
             Spacer(Modifier.height(20.dp))
@@ -590,6 +586,40 @@ fun AyahArabicText(
             modifier = modifier,
             style = style,
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RepeatCountRow(
+    repeatCount: Int,
+    onRepeatCount: (Int) -> Unit,
+) {
+    val chipColors = FilterChipDefaults.filterChipColors(
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        labelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+        selectedLabelColor = MaterialTheme.colorScheme.onBackground,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        RepeatCounts.all.forEach { count ->
+            val selected = RepeatCounts.normalize(repeatCount) == count
+            FilterChip(
+                selected = selected,
+                onClick = { onRepeatCount(count) },
+                label = { Text(RepeatCounts.label(count)) },
+                colors = chipColors,
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selected,
+                    borderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
+                    selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                ),
+            )
+        }
     }
 }
 

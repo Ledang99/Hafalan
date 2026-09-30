@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.data.AyahContent
 import com.quranwidget.hafalan.data.PlaybackSpeeds
+import com.quranwidget.hafalan.data.RepeatCounts
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.ui.AyahArabicText
@@ -90,7 +91,7 @@ private sealed interface PlayerUi {
         val ayah: AyahContent,
         val playing: Boolean,
         val speed: Float,
-        val repeating: Boolean,
+        val repeatCount: Int,
         val script: ScriptEdition,
     ) : PlayerUi
 
@@ -110,18 +111,44 @@ private fun AudioPlayerScreen(
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     val scope = rememberCoroutineScope()
 
-    fun restartAyahWithRepeat() {
+    fun markPlaying(ayah: AyahContent, speed: Float, count: Int, script: ScriptEdition) {
+        ui = PlayerUi.Ready(
+            ayah = ayah,
+            playing = true,
+            speed = speed,
+            repeatCount = count,
+            script = script,
+        )
+    }
+
+    fun markFinished(ayah: AyahContent, speed: Float, count: Int, script: ScriptEdition) {
+        ui = PlayerUi.Ready(
+            ayah = ayah,
+            playing = false,
+            speed = speed,
+            repeatCount = count,
+            script = script,
+        )
+    }
+
+    fun restartWithPreferredCount() {
         val ready = ui as? PlayerUi.Ready ?: return
         val player = mediaPlayer ?: return
-        player.isLooping = true
-        runCatching {
-            player.seekTo(0)
-            applyPlaybackSpeed(player, ready.speed)
-            player.start()
+        // If Off, tapping Repeat starts a 3× counted run and persists 3×.
+        val count = if (RepeatCounts.isRepeating(ready.repeatCount)) {
+            ready.repeatCount
+        } else {
+            RepeatCounts.THREE
         }
-        ui = ready.copy(playing = true, repeating = true)
+        val counted = CountedAyahPlayer(
+            repeatCount = count,
+            onStarted = { markPlaying(ready.ayah, ready.speed, count, ready.script) },
+            onFinished = { markFinished(ready.ayah, ready.speed, count, ready.script) },
+        )
+        counted.restart(player, ready.speed)
+        ui = ready.copy(playing = true, repeatCount = count)
         scope.launch(Dispatchers.IO) {
-            HafalanApp.get().repository.setRepeatAyah(true)
+            HafalanApp.get().repository.setRepeatCount(count)
         }
     }
 
@@ -129,7 +156,7 @@ private fun AudioPlayerScreen(
         data class Load(
             val ayah: AyahContent,
             val speed: Float,
-            val repeat: Boolean,
+            val repeatCount: Int,
             val script: ScriptEdition,
         )
         val loaded = withContext(Dispatchers.IO) {
@@ -137,13 +164,13 @@ private fun AudioPlayerScreen(
             Load(
                 ayah = repo.loadAyahForPlayback(),
                 speed = repo.playbackSpeed(),
-                repeat = repo.repeatAyah(),
+                repeatCount = repo.repeatCount(),
                 script = repo.scriptEdition(),
             )
         }
         val ayah = loaded.ayah
         val speed = loaded.speed
-        val repeat = loaded.repeat
+        val repeatCount = loaded.repeatCount
         val script = loaded.script
         val url = ayah.audioUrl
         if (url.isNullOrBlank()) {
@@ -156,6 +183,11 @@ private fun AudioPlayerScreen(
             return@LaunchedEffect
         }
         try {
+            val counted = CountedAyahPlayer(
+                repeatCount = repeatCount,
+                onStarted = { markPlaying(ayah, speed, repeatCount, script) },
+                onFinished = { markFinished(ayah, speed, repeatCount, script) },
+            )
             val player = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -164,29 +196,7 @@ private fun AudioPlayerScreen(
                         .build(),
                 )
                 setDataSource(url)
-                isLooping = repeat
-                setOnPreparedListener {
-                    applyPlaybackSpeed(this, speed)
-                    start()
-                    ui = PlayerUi.Ready(
-                        ayah = ayah,
-                        playing = true,
-                        speed = speed,
-                        repeating = repeat,
-                        script = script,
-                    )
-                }
-                setOnCompletionListener {
-                    if (!isLooping) {
-                        ui = PlayerUi.Ready(
-                            ayah = ayah,
-                            playing = false,
-                            speed = speed,
-                            repeating = repeat,
-                            script = script,
-                        )
-                    }
-                }
+                counted.attach(this, speed)
                 setOnErrorListener { _, _, _ ->
                     ui = PlayerUi.Error("Playback failed", ayah, script)
                     true
@@ -198,7 +208,7 @@ private fun AudioPlayerScreen(
                 ayah = ayah,
                 playing = false,
                 speed = speed,
-                repeating = repeat,
+                repeatCount = repeatCount,
                 script = script,
             )
         } catch (e: Exception) {
@@ -251,8 +261,8 @@ private fun AudioPlayerScreen(
                     Spacer(Modifier.height(24.dp))
                     Text(
                         text = when {
-                            state.playing && state.repeating ->
-                                "Looping · Al-Afasy · ${PlaybackSpeeds.label(state.speed)}"
+                            state.playing && RepeatCounts.isRepeating(state.repeatCount) ->
+                                "Repeating ${RepeatCounts.label(state.repeatCount)} · Al-Afasy · ${PlaybackSpeeds.label(state.speed)}"
                             state.playing ->
                                 "Listening · Al-Afasy · ${PlaybackSpeeds.label(state.speed)}"
                             else ->
@@ -267,10 +277,15 @@ private fun AudioPlayerScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         OutlinedButton(
-                            onClick = { restartAyahWithRepeat() },
+                            onClick = { restartWithPreferredCount() },
                             modifier = Modifier.weight(1f),
                         ) {
-                            Text("Repeat")
+                            val label = if (RepeatCounts.isRepeating(state.repeatCount)) {
+                                "Repeat ${RepeatCounts.label(state.repeatCount)}"
+                            } else {
+                                "Repeat 3×"
+                            }
+                            Text(label)
                         }
                         Button(
                             onClick = onClose,

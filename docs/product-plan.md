@@ -8,7 +8,7 @@ Help someone memorize one ayah at a time from a chosen surah, with a home-screen
 
 1. Open app → pick surah (defaults to Al-Fatihah)
 2. See ayah 1 in Arabic (Uthmani by default; switch to Simple in **Arabic script**)
-3. Optional: choose **1× / 1.5× / 2×** speed and **Repeat ayah**, then tap ayah / Listen / widget to hear Sheikh Mishari Rashid Al-Afasy (widget plays via foreground service — stays on the home screen)
+3. Optional: choose **1× / 1.5× / 2×** speed and **Off / 3× / 6× / 9×** repeat, then tap ayah / Listen / widget to hear Sheikh Mishari Rashid Al-Afasy (widget plays via foreground service — stays on the home screen; repeat stops after the chosen count)
 4. Tap **Remembered** → ayah recorded in progress history and target advances (widget updates)
 5. Open **Progress** (chart icon) for per-surah and overall remembered %
 6. If they skip a day without Remembered, the target advances one ayah per missed local day (does not add to remembered history)
@@ -29,9 +29,9 @@ Calm, quiet companion energy: one ayah at a time, listen + read together (Al-Afa
 
 ## Technical notes
 
-- Persistence: DataStore Preferences (progress pointer, remembered ayah set, speed, script, repeat, Day/Dark theme, widget bg color + opacity)
+- Persistence: DataStore Preferences (progress pointer, remembered ayah set, speed, script, repeat count, Day/Dark theme, widget bg color + opacity)
 - Widget: resizeable; Arabic auto-scales; customizable ARGB background
-- Version: 1.07 (shown on Progress)
-- Text: Quran.com Uthmani / uthmani_simple; fallback Al-Fatihah bundle
-- Audio: Quran.com recitation id 7 (Al-Afasy) + verses.quran.com CDN; MediaPlayer `PlaybackParams` for 1×/1.5×/2×; `isLooping` when repeat is on
+- Version: 1.09 (shown on Progress)
+- Text: Quran.com Uthmani / Tajweed; fallback Al-Fatihah bundle
+- Audio: Quran.com recitation id 7 (Al-Afasy) + verses.quran.com CDN; MediaPlayer `PlaybackParams` for 1×/1.5×/2×; finite counted repeats (3/6/9) via completion seek — never infinite `isLooping`
 - Widget: `AppWidgetProvider` + RemoteViews; tap starts `AyahPlaybackService` (mediaPlayback FGS), not `MainActivity`
