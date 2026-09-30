@@ -2,6 +2,10 @@
 <!--
   Compact chrome + auto-sizing KFGQPC Arabic so the ayah fills most of the
   home-screen tile. Size bounds are refreshed in code on resize.
+
+  Note: android:fontFamily on TextView is preview-only — App Widget hosts
+  cannot apply app Typefaces via RemoteViews. HafalanWidgetProvider always
+  rasterizes ayah text with bundled uthmanic_hafs into widget_ayah_image.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -35,27 +39,42 @@
         android:textColor="@color/widget_muted"
         android:textSize="1sp" />
 
-    <TextView
-        android:id="@+id/widget_ayah_text"
+    <!-- Ayah shown as ImageView bitmap (bundled KFGQPC); TextView kept for ids/preview. -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="2dp"
-        android:layout_weight="1"
-        android:autoSizeMaxTextSize="56sp"
-        android:autoSizeMinTextSize="12sp"
-        android:autoSizeStepGranularity="1sp"
-        android:autoSizeTextType="uniform"
-        android:ellipsize="end"
-        android:fontFamily="@font/uthmanic_hafs"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:lineSpacingExtra="0dp"
-        android:lineSpacingMultiplier="1.05"
-        android:maxLines="8"
-        android:textAlignment="center"
-        android:textColor="@color/widget_text"
-        android:textDirection="rtl"
-        android:textSize="34sp" />
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/widget_ayah_text"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:autoSizeMaxTextSize="56sp"
+            android:autoSizeMinTextSize="12sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:ellipsize="end"
+            android:fontFamily="@font/uthmanic_hafs"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:lineSpacingExtra="0dp"
+            android:lineSpacingMultiplier="1.05"
+            android:maxLines="8"
+            android:textAlignment="center"
+            android:textColor="@color/widget_text"
+            android:textDirection="rtl"
+            android:textSize="34sp"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/widget_ayah_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/widget_hint"

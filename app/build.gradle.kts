@@ -12,8 +12,8 @@ android {
         applicationId = "com.quranwidget.hafalan"
         minSdk = 26
         targetSdk = 35
-        versionCode = 109
-        versionName = "1.09"
+        versionCode = 110
+        versionName = "1.10"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

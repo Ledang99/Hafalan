@@ -8,7 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.R
@@ -141,12 +141,12 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             views.setTextColor(R.id.widget_ayah_text, textColor)
             views.setTextColor(R.id.widget_hint, mutedColor)
 
-            applyAutoSizeForOptions(appWidgetManager, appWidgetId, views)
+            val ayahMetrics = ayahTileMetrics(appWidgetManager, appWidgetId)
 
-            if (snapshot == null) {
+            val ayahText: CharSequence = if (snapshot == null) {
                 views.setTextViewText(R.id.widget_surah, context.getString(R.string.widget_empty))
                 views.setTextViewText(R.id.widget_ayah_meta, "")
-                views.setTextViewText(R.id.widget_ayah_text, "…")
+                "…"
             } else {
                 val (state, script, _) = snapshot
                 val surah = SurahCatalog.get(state.surahNumber)
@@ -156,35 +156,58 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                         "Ayah ${state.ayahNumber}/${surah.ayahCount}",
                 )
                 views.setTextViewText(R.id.widget_ayah_meta, "")
-                views.setTextViewText(
-                    R.id.widget_ayah_text,
-                    ayahDisplayText(state.cachedAyahText, script, textColor, darkSurface),
-                )
+                ayahDisplayText(state.cachedAyahText, script, textColor, darkSurface)
             }
+
+            // Same bundled KFGQPC Uthmanic Hafs as Compose — not the thin system Arabic face.
+            WidgetAyahFont.apply(
+                context = context,
+                views = views,
+                text = ayahText,
+                textColor = textColor,
+                widthDp = ayahMetrics.widthDp,
+                heightDp = ayahMetrics.heightDp,
+                maxLines = ayahMetrics.maxLines,
+                maxSp = ayahMetrics.maxSp,
+            )
 
             val playPending = playPendingIntent(context, appWidgetId)
             views.setOnClickPendingIntent(R.id.widget_root, playPending)
             views.setOnClickPendingIntent(R.id.widget_surah, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_meta, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_text, playPending)
+            views.setOnClickPendingIntent(R.id.widget_ayah_image, playPending)
             views.setOnClickPendingIntent(R.id.widget_hint, playPending)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
         /**
-         * Re-apply max lines and a size hint from current widget options so the
-         * XML `autoSizeTextType=uniform` remasures after a home-screen resize.
+         * Interior size for the ayah area (widget tile minus chrome/padding) so
+         * TextView auto-size / Bitmap rasterization fill the resized tile.
          */
-        private fun applyAutoSizeForOptions(
+        private data class AyahTileMetrics(
+            val widthDp: Int,
+            val heightDp: Int,
+            val maxSp: Float,
+            val maxLines: Int,
+        )
+
+        private fun ayahTileMetrics(
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int,
-            views: RemoteViews,
-        ) {
+        ): AyahTileMetrics {
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
             val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
             val maxH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minH)
+            val minW = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 180)
+            val maxW = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, minW)
             val heightDp = maxOf(minH, maxH).coerceAtLeast(40)
+            val widthDp = maxOf(minW, maxW).coerceAtLeast(48)
+
+            // Chrome: padding 4+3 + surah ~14 + hint ~12 ≈ 33dp; side padding 6+6.
+            val ayahHeightDp = (heightDp - 33).coerceAtLeast(36)
+            val ayahWidthDp = (widthDp - 12).coerceAtLeast(40)
 
             val maxSp = (heightDp / 2.6f).coerceIn(28f, 72f)
             val maxLines = when {
@@ -192,19 +215,13 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 heightDp >= 160 -> 6
                 else -> 5
             }
-            views.setInt(R.id.widget_ayah_text, "setMaxLines", maxLines)
-            // Seed preferred size; TextView auto-size then fills remaining space.
-            views.setTextViewTextSize(
-                R.id.widget_ayah_text,
-                TypedValue.COMPLEX_UNIT_SP,
-                maxSp,
-            )
+            return AyahTileMetrics(ayahWidthDp, ayahHeightDp, maxSp, maxLines)
         }
 
         /**
          * Uthmani → plain QPC Hafs text (strip any leftover tajweed tags).
          * Tajweed → colored spans; palette follows light vs dark widget surface.
-         * Font itself comes from `widget_hafalan.xml` (`@font/uthmanic_hafs`).
+         * Font is applied by [WidgetAyahFont] (same `uthmanic_hafs` as the app).
          */
         private fun ayahDisplayText(
             cached: String,
