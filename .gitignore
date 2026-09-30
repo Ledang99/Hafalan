@@ -12,3 +12,7 @@
 *.aab
 app/build/
 .kotlin/
+
+# Keep published release APKs
+!releases/
+!releases/*.apk

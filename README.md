@@ -6,6 +6,16 @@ Pick a surah, see the current ayah in Arabic (Uthmani or Simple via Quran.com), 
 
 Tone is intentionally quiet — one small piece at a time (feel inspired by companions like Tasmi; this app stays Android widget-first and does not clone streak/journey flows).
 
+## Download APK (latest)
+
+**v1.08** debug APK:
+
+- [Download hafalan-v1.08.apk](https://github.com/Ledang99/Hafalan/raw/main/releases/hafalan-v1.08.apk)
+
+On GitHub: open [`releases/hafalan-v1.08.apk`](https://github.com/Ledang99/Hafalan/blob/main/releases/hafalan-v1.08.apk) → **Download raw file**.
+
+Install: allow install from this source if Android asks, then add the **Hafalan ayah** widget from the home-screen widget picker.
+
 ## Features (MVP)
 
 - Choose any of the 114 surahs
