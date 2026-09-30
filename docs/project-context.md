@@ -4,8 +4,8 @@
 Android home-screen widget for daily Quran hafalan, driven by a small companion app.
 
 ## Version
-- `versionName` **1.09** · `versionCode` **109**
-- Progress screen footer shows `Version 1.09`
+- `versionName` **1.11** · `versionCode` **111**
+- Progress screen footer shows `Version 1.11`
 
 ## Decisions
 - Platform: Android App Widget + main app
@@ -19,13 +19,14 @@ Android home-screen widget for daily Quran hafalan, driven by a small companion 
 - Appearance: **Day / Dark** chips (persisted); app Material theme + widget default background follow the choice until the user customizes widget color
 - Widget background: color swatches + opacity 0–100% on Home (below play controls); ARGB applied via RemoteViews; text + tajweed palette follow background luminance (readable on light or dark)
 - Widget resize: `resizeMode=horizontal|vertical` with min/max resize; `onAppWidgetOptionsChanged` re-pushes RemoteViews; Arabic auto-size (12–56sp XML + size hint from tile height) fills the new size; meta stays secondary
-- Widget typography: Arabic uses KFGQPC font, auto-sizes to fill the tile; surah/ayah meta collapsed to one small header line; tight padding; tap still plays via `AyahPlaybackService` (no black screen)
+- Widget typography: Arabic uses **same bundled KFGQPC Uthmanic Hafs** as Compose (`res/font/uthmanic_hafs.ttf`). RemoteViews cannot set custom Typeface across processes, so the widget **rasterizes** ayah text into an ImageView bitmap
+- Widget controls (v1.11): far-left **Stop** PendingIntent → `AyahPlaybackService.ACTION_STOP` (cancels counted repeats / stops service); ayah area + far-right **Tap to listen** → play. Explicit left/right hit targets (not whole-widget-only)
 - Widget script sync: chip changes refetch ayah text for the selected edition and **push RemoteViews immediately** (`pushUpdate`); widget reads `scriptEdition` and renders Uthmani (plain QPC Hafs) vs Tajweed (colored spans)
 - Progress: user picks surah; “Remembered” advances ayah **and** adds that ayah to a persisted remembered set; Progress screen shows per-surah % and overall % vs 6236; daily target still advances when not marked
 - Progress backup/restore: Progress screen **Backup** / **Restore** near the footer; exports JSON (`rememberedAyahs` + current surah/ayah pointer + optional script) via SAF CreateDocument; Restore confirms then replaces local progress via OpenDocument; percentages and current target match after restore
 - Playback speed: 1× / 1.5× / 2× chips in the Home options row (with script + theme); persisted in DataStore and applied to MediaPlayer for in-app Listen and widget playback
 - Repeat count (v1.09): **Off / 3× / 6× / 9×** chips near play; persisted; widget service + in-app Listen play that many times then **stop** (no infinite loop). Notification **Stop** still cancels mid-run. Legacy `repeat_ayah=true` migrates to 3×
 - Listen screen: bottom actions are **Repeat N×** (left, outlined — restarts a counted run using the Home preference; if Off, starts 3× and persists it) and **Close** (right); error state keeps Close only
-- Widget tap: starts `AyahPlaybackService` (foreground media notification) — stays on home screen; does **not** open `MainActivity` or a black/fullscreen Activity
+- Widget tap Listen: starts `AyahPlaybackService` (foreground media notification) — stays on home screen; does **not** open `MainActivity` or a black/fullscreen Activity. Widget **Stop** (far left) cancels mid-run without relying only on the notification.
 - UX reference: Tasmi ([App Store](https://apps.apple.com/us/app/tasmi/id6770039955), [tasmi.cloud](https://tasmi.cloud/)) — calm ayah-by-ayah listen+read; not a clone
 - Out of MVP scope: spaced repetition decks, multi-stage challenges, streaks/journey, accounts/sync

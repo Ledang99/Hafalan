@@ -8,11 +8,11 @@ Tone is intentionally quiet — one small piece at a time (feel inspired by comp
 
 ## Download APK (latest)
 
-**v1.10** debug APK:
+**v1.11** debug APK:
 
-- [Download hafalan-v1.10.apk](https://github.com/Ledang99/Hafalan/raw/main/releases/hafalan-v1.10.apk)
+- [Download hafalan-v1.11.apk](https://github.com/Ledang99/Hafalan/raw/main/releases/hafalan-v1.11.apk)
 
-On GitHub: open [`releases/hafalan-v1.10.apk`](https://github.com/Ledang99/Hafalan/blob/main/releases/hafalan-v1.10.apk) → **Download raw file**.
+On GitHub: open [`releases/hafalan-v1.11.apk`](https://github.com/Ledang99/Hafalan/blob/main/releases/hafalan-v1.11.apk) → **Download raw file**.
 
 Install: allow install from this source if Android asks, then add the **Hafalan ayah** widget from the home-screen widget picker.
 
@@ -26,7 +26,7 @@ Install: allow install from this source if Android asks, then add the **Hafalan 
 - Daily advance when an ayah is left unmarked (see rule below)
 - **Reciter speed:** 1× / 1.5× / 2× chips near Listen (persisted; used by app + widget)
 - **Repeat count:** Off / 3× / 6× / 9× chips near play controls (persisted; plays that many times then stops — app + widget; notification Stop cancels mid-run)
-- Tap widget to play Al-Afasy via a **foreground media notification** (stays on home screen; no black Activity)
+- Widget: far-left **Stop** cancels counted repeats; ayah / far-right **Tap to listen** starts Al-Afasy via a **foreground media notification** (stays on home screen; no black Activity)
 - Tap ayah / Listen in the app for the same audio (simple player screen)
 - Local persistence via DataStore (no auth, no backend)
 - Offline fallback text for Al-Fatihah if the network fails
@@ -75,7 +75,7 @@ Widget preview requires a physical device or emulator home screen; CI/headless e
 |------|------|
 | `app/src/main/java/.../MainActivity.kt` | Compose app entry |
 | `app/src/main/java/.../ui/MainScreen.kt` | Surah picker, ayah, script/speed/repeat, Progress, Remembered, Play |
-| `app/src/main/java/.../widget/HafalanWidgetProvider.kt` | Home-screen App Widget (tap → playback service) |
+| `app/src/main/java/.../widget/HafalanWidgetProvider.kt` | Home-screen App Widget (left Stop / right Listen → playback service) |
 | `app/src/main/java/.../audio/AyahPlaybackService.kt` | Foreground MediaPlayer for widget taps |
 | `app/src/main/java/.../data/HafalanRepository.kt` | Progress + remembered set + prefs |
 | `app/src/main/java/.../data/QuranApi.kt` | Quran.com text editions + Al-Afasy audio |

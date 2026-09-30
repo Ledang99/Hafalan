@@ -6,6 +6,9 @@
   Note: android:fontFamily on TextView is preview-only — App Widget hosts
   cannot apply app Typefaces via RemoteViews. HafalanWidgetProvider always
   rasterizes ayah text with bundled uthmanic_hafs into widget_ayah_image.
+
+  Bottom row: far-left Stop cancels counted playback; far-right / ayah area
+  Listen starts AyahPlaybackService (same as prior whole-widget tap).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -41,6 +44,7 @@
 
     <!-- Ayah shown as ImageView bitmap (bundled KFGQPC); TextView kept for ids/preview. -->
     <FrameLayout
+        android:id="@+id/widget_ayah_area"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="2dp"
@@ -76,13 +80,39 @@
             android:scaleType="fitCenter" />
     </FrameLayout>
 
-    <TextView
-        android:id="@+id/widget_hint"
+    <!-- Far left = Stop; far right = Listen (ayah area also listens). -->
+    <LinearLayout
+        android:id="@+id/widget_controls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="end"
-        android:includeFontPadding="false"
-        android:text="@string/tap_to_play"
-        android:textColor="@color/widget_muted"
-        android:textSize="9sp" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/widget_stop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:paddingStart="2dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:text="@string/playback_stop"
+            android:textColor="@color/widget_muted"
+            android:textSize="9sp" />
+
+        <TextView
+            android:id="@+id/widget_hint"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:includeFontPadding="false"
+            android:paddingStart="8dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:text="@string/tap_to_play"
+            android:textColor="@color/widget_muted"
+            android:textSize="9sp" />
+    </LinearLayout>
 </LinearLayout>

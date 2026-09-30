@@ -64,6 +64,9 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             ACTION_WIDGET_PLAY -> {
                 startPlayback(context.applicationContext)
             }
+            ACTION_WIDGET_STOP -> {
+                stopPlayback(context.applicationContext)
+            }
             else -> super.onReceive(context, intent)
         }
     }
@@ -71,6 +74,7 @@ class HafalanWidgetProvider : AppWidgetProvider() {
     companion object {
         const val ACTION_WIDGET_REFRESH = "com.quranwidget.hafalan.ACTION_WIDGET_REFRESH"
         const val ACTION_WIDGET_PLAY = "com.quranwidget.hafalan.ACTION_WIDGET_PLAY"
+        const val ACTION_WIDGET_STOP = "com.quranwidget.hafalan.ACTION_WIDGET_STOP"
 
         private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -97,6 +101,11 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             }
         }
 
+        /** Cancels counted repeats / stops [AyahPlaybackService] (same as notification Stop). */
+        fun stopPlayback(context: Context) {
+            context.startService(AyahPlaybackService.stopIntent(context))
+        }
+
         fun playPendingIntent(context: Context, appWidgetId: Int): PendingIntent {
             val intent = AyahPlaybackService.playIntent(context)
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -115,6 +124,18 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 )
             }
         }
+
+        fun stopPendingIntent(context: Context, appWidgetId: Int): PendingIntent {
+            // Distinct requestCode from play so left/right targets do not collide.
+            return PendingIntent.getService(
+                context,
+                appWidgetId + STOP_REQUEST_OFFSET,
+                AyahPlaybackService.stopIntent(context),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        private const val STOP_REQUEST_OFFSET = 10_000
 
         fun updateWidget(
             context: Context,
@@ -139,6 +160,7 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             views.setTextColor(R.id.widget_surah, mutedColor)
             views.setTextColor(R.id.widget_ayah_meta, mutedColor)
             views.setTextColor(R.id.widget_ayah_text, textColor)
+            views.setTextColor(R.id.widget_stop, mutedColor)
             views.setTextColor(R.id.widget_hint, mutedColor)
 
             val ayahMetrics = ayahTileMetrics(appWidgetManager, appWidgetId)
@@ -171,10 +193,14 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 maxSp = ayahMetrics.maxSp,
             )
 
+            // Far left Stop; ayah / far-right Listen. Do not bind play on the root —
+            // that would swallow the left Stop hit target on many launchers.
             val playPending = playPendingIntent(context, appWidgetId)
-            views.setOnClickPendingIntent(R.id.widget_root, playPending)
+            val stopPending = stopPendingIntent(context, appWidgetId)
+            views.setOnClickPendingIntent(R.id.widget_stop, stopPending)
             views.setOnClickPendingIntent(R.id.widget_surah, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_meta, playPending)
+            views.setOnClickPendingIntent(R.id.widget_ayah_area, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_text, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_image, playPending)
             views.setOnClickPendingIntent(R.id.widget_hint, playPending)

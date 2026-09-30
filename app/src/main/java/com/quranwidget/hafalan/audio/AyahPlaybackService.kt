@@ -207,5 +207,8 @@ class AyahPlaybackService : Service() {
 
         fun playIntent(context: Context): Intent =
             Intent(context, AyahPlaybackService::class.java).setAction(ACTION_PLAY)
+
+        fun stopIntent(context: Context): Intent =
+            Intent(context, AyahPlaybackService::class.java).setAction(ACTION_STOP)
     }
 }

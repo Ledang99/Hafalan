@@ -46,6 +46,7 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_REFRESH" />
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_PLAY" />
+                <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_STOP" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
