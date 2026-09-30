@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +47,7 @@ import com.quranwidget.hafalan.ui.AyahArabicText
 import com.quranwidget.hafalan.ui.HafalanTheme
 import com.quranwidget.hafalan.ui.QuranFonts
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -104,6 +108,22 @@ private fun AudioPlayerScreen(
 ) {
     var ui by remember { mutableStateOf<PlayerUi>(PlayerUi.Loading) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun restartAyahWithRepeat() {
+        val ready = ui as? PlayerUi.Ready ?: return
+        val player = mediaPlayer ?: return
+        player.isLooping = true
+        runCatching {
+            player.seekTo(0)
+            applyPlaybackSpeed(player, ready.speed)
+            player.start()
+        }
+        ui = ready.copy(playing = true, repeating = true)
+        scope.launch(Dispatchers.IO) {
+            HafalanApp.get().repository.setRepeatAyah(true)
+        }
+    }
 
     LaunchedEffect(Unit) {
         data class Load(
@@ -242,8 +262,22 @@ private fun AudioPlayerScreen(
                         textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(16.dp))
-                    Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) {
-                        Text("Close")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = { restartAyahWithRepeat() },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Repeat")
+                        }
+                        Button(
+                            onClick = onClose,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Close")
+                        }
                     }
                 }
                 is PlayerUi.Error -> {

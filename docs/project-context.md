@@ -4,8 +4,8 @@
 Android home-screen widget for daily Quran hafalan, driven by a small companion app.
 
 ## Version
-- `versionName` **1.07** · `versionCode` **107**
-- Progress screen footer shows `Version 1.07`
+- `versionName` **1.08** · `versionCode` **108**
+- Progress screen footer shows `Version 1.08`
 
 ## Decisions
 - Platform: Android App Widget + main app
@@ -25,6 +25,7 @@ Android home-screen widget for daily Quran hafalan, driven by a small companion 
 - Progress backup/restore: Progress screen **Backup** / **Restore** near the footer; exports JSON (`rememberedAyahs` + current surah/ayah pointer + optional script) via SAF CreateDocument; Restore confirms then replaces local progress via OpenDocument; percentages and current target match after restore
 - Playback speed: 1× / 1.5× / 2× chips in the Home options row (with script + theme); persisted in DataStore and applied to MediaPlayer for in-app Listen and widget playback
 - Repeat ayah: toggle loops current ayah during Listen + widget/service playback; persisted; sits near Listen/Remembered
+- Listen screen (v1.08): bottom actions are **Repeat** (left, outlined — enables loop + restarts current ayah, persists Home Repeat) and **Close** (right); error state keeps Close only
 - Widget tap: starts `AyahPlaybackService` (foreground media notification) — stays on home screen; does **not** open `MainActivity` or a black/fullscreen Activity
 - UX reference: Tasmi ([App Store](https://apps.apple.com/us/app/tasmi/id6770039955), [tasmi.cloud](https://tasmi.cloud/)) — calm ayah-by-ayah listen+read; not a clone
 - Out of MVP scope: spaced repetition decks, multi-stage challenges, streaks/journey, accounts/sync
