@@ -27,6 +27,12 @@ Calm, quiet companion energy: one ayah at a time, listen + read together (Al-Afa
 - Full mushaf browser, bookmarks
 - iOS / Wear OS
 
+## next plan
+1. Add 50x repeat
+2. Translation in Malay for the main page
+3. Add forward/backward ayah
+4. Simply the menu selection 
+
 ## Technical notes
 
 - Persistence: DataStore Preferences (progress pointer, remembered ayah set, speed, script, repeat count, Day/Dark theme, widget bg color + opacity)
