@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -232,9 +234,9 @@ private fun AudioPlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
         ) {
             when (val state = ui) {
                 PlayerUi.Loading -> CircularProgressIndicator()
@@ -258,6 +260,15 @@ private fun AudioPlayerScreen(
                             color = MaterialTheme.colorScheme.onBackground,
                         ),
                     )
+                    if (state.ayah.textMalay.isNotBlank()) {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = state.ayah.textMalay,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.82f),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                     Spacer(Modifier.height(24.dp))
                     Text(
                         text = when {

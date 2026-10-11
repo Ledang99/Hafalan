@@ -23,9 +23,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.BarChart
@@ -40,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -58,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -86,6 +91,9 @@ fun MainScreen(
     onDismissSurahPicker: () -> Unit,
     onSurahSelected: (Int) -> Unit,
     onRemembered: () -> Unit,
+    onPreviousAyah: () -> Unit,
+    onNextAyah: () -> Unit,
+    onSelectAyah: (Int) -> Unit,
     onPlay: () -> Unit,
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
@@ -116,6 +124,9 @@ fun MainScreen(
             onDismissSurahPicker = onDismissSurahPicker,
             onSurahSelected = onSurahSelected,
             onRemembered = onRemembered,
+            onPreviousAyah = onPreviousAyah,
+            onNextAyah = onNextAyah,
+            onSelectAyah = onSelectAyah,
             onPlay = onPlay,
             onPlaybackSpeed = onPlaybackSpeed,
             onScriptEdition = onScriptEdition,
@@ -137,6 +148,9 @@ private fun HomeScreen(
     onDismissSurahPicker: () -> Unit,
     onSurahSelected: (Int) -> Unit,
     onRemembered: () -> Unit,
+    onPreviousAyah: () -> Unit,
+    onNextAyah: () -> Unit,
+    onSelectAyah: (Int) -> Unit,
     onPlay: () -> Unit,
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
@@ -199,10 +213,13 @@ private fun HomeScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Ayah ${state.hafalan.ayahNumber} of ${state.surah.ayahCount}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            AyahStepper(
+                ayahNumber = state.hafalan.ayahNumber,
+                ayahCount = state.surah.ayahCount,
+                enabled = !state.loading,
+                onPrevious = onPreviousAyah,
+                onNext = onNextAyah,
+                onSelectAyah = onSelectAyah,
             )
             Spacer(Modifier.height(28.dp))
 
@@ -227,6 +244,22 @@ private fun HomeScreen(
                             color = MaterialTheme.colorScheme.onBackground,
                         ),
                     )
+                    if (state.hafalan.cachedMalayText.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Bahasa Melayu",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = state.hafalan.cachedMalayText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.82f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
 
@@ -559,6 +592,88 @@ private fun ProgressScreen(
                 Spacer(Modifier.height(8.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun AyahStepper(
+    ayahNumber: Int,
+    ayahCount: Int,
+    enabled: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onSelectAyah: (Int) -> Unit,
+) {
+    var jumpOpen by remember { mutableStateOf(false) }
+    var draft by remember(ayahNumber) { mutableStateOf(ayahNumber.toString()) }
+    val parsed = draft.toIntOrNull()
+    val canGo = parsed != null && parsed in 1..ayahCount
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        IconButton(
+            onClick = onPrevious,
+            enabled = enabled && ayahNumber > 1,
+        ) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous ayah")
+        }
+        TextButton(
+            onClick = {
+                draft = ayahNumber.toString()
+                jumpOpen = true
+            },
+            enabled = enabled,
+        ) {
+            Text(
+                text = "Ayah $ayahNumber of $ayahCount",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+            )
+        }
+        IconButton(
+            onClick = onNext,
+            enabled = enabled && ayahNumber < ayahCount,
+        ) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next ayah")
+        }
+    }
+
+    if (jumpOpen) {
+        AlertDialog(
+            onDismissRequest = { jumpOpen = false },
+            title = { Text("Go to ayah") },
+            text = {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { value ->
+                        draft = value.filter { it.isDigit() }.take(3)
+                    },
+                    label = { Text("Ayah number") },
+                    supportingText = { Text("1 to $ayahCount") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        parsed?.let(onSelectAyah)
+                        jumpOpen = false
+                    },
+                    enabled = canGo,
+                ) {
+                    Text("Go")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { jumpOpen = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 

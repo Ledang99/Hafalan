@@ -47,6 +47,9 @@
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_REFRESH" />
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_PLAY" />
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_STOP" />
+                <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_PREV" />
+                <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_NEXT" />
+                <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_TOGGLE_LANG" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

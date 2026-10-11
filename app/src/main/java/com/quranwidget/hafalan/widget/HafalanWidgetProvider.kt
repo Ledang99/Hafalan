@@ -3,17 +3,19 @@ package com.quranwidget.hafalan.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.view.View
+import android.graphics.Typeface
 import android.widget.RemoteViews
 import com.quranwidget.hafalan.HafalanApp
 import com.quranwidget.hafalan.R
 import com.quranwidget.hafalan.audio.AyahPlaybackService
 import com.quranwidget.hafalan.data.AppThemeMode
+import com.quranwidget.hafalan.data.HafalanState
 import com.quranwidget.hafalan.data.ScriptEdition
 import com.quranwidget.hafalan.data.SurahCatalog
 import com.quranwidget.hafalan.data.WidgetAppearance
@@ -67,6 +69,9 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             ACTION_WIDGET_STOP -> {
                 stopPlayback(context.applicationContext)
             }
+            ACTION_WIDGET_PREV -> adjustAyah(context, -1, goAsync())
+            ACTION_WIDGET_NEXT -> adjustAyah(context, 1, goAsync())
+            ACTION_WIDGET_TOGGLE_LANG -> toggleLanguage(context, goAsync())
             else -> super.onReceive(context, intent)
         }
     }
@@ -75,6 +80,9 @@ class HafalanWidgetProvider : AppWidgetProvider() {
         const val ACTION_WIDGET_REFRESH = "com.quranwidget.hafalan.ACTION_WIDGET_REFRESH"
         const val ACTION_WIDGET_PLAY = "com.quranwidget.hafalan.ACTION_WIDGET_PLAY"
         const val ACTION_WIDGET_STOP = "com.quranwidget.hafalan.ACTION_WIDGET_STOP"
+        const val ACTION_WIDGET_PREV = "com.quranwidget.hafalan.ACTION_WIDGET_PREV"
+        const val ACTION_WIDGET_NEXT = "com.quranwidget.hafalan.ACTION_WIDGET_NEXT"
+        const val ACTION_WIDGET_TOGGLE_LANG = "com.quranwidget.hafalan.ACTION_WIDGET_TOGGLE_LANG"
 
         private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -90,6 +98,37 @@ class HafalanWidgetProvider : AppWidgetProvider() {
 
         fun requestUpdate(context: Context) {
             pushUpdate(context)
+        }
+
+        private fun adjustAyah(
+            context: Context,
+            delta: Int,
+            pending: BroadcastReceiver.PendingResult,
+        ) {
+            val appContext = context.applicationContext
+            appScope.launch {
+                try {
+                    WidgetAutoScroll.reset()
+                    val moved = HafalanApp.get().repository.moveAyahBy(delta)
+                    if (!moved) pushUpdate(appContext)
+                } finally {
+                    pending.finish()
+                }
+            }
+        }
+
+        private fun toggleLanguage(
+            context: Context,
+            pending: BroadcastReceiver.PendingResult,
+        ) {
+            appScope.launch {
+                try {
+                    WidgetAutoScroll.reset()
+                    HafalanApp.get().repository.toggleWidgetMalay()
+                } finally {
+                    pending.finish()
+                }
+            }
         }
 
         fun startPlayback(context: Context) {
@@ -136,6 +175,26 @@ class HafalanWidgetProvider : AppWidgetProvider() {
         }
 
         private const val STOP_REQUEST_OFFSET = 10_000
+        private const val PREV_REQUEST_OFFSET = 20_000
+        private const val NEXT_REQUEST_OFFSET = 30_000
+        private const val LANG_REQUEST_OFFSET = 40_000
+
+        private fun actionPendingIntent(
+            context: Context,
+            appWidgetId: Int,
+            action: String,
+            requestCode: Int,
+        ): PendingIntent {
+            val intent = Intent(context, HafalanWidgetProvider::class.java).apply {
+                this.action = action
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
 
         fun updateWidget(
             context: Context,
@@ -146,31 +205,70 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             val snapshot = runCatching {
                 kotlinx.coroutines.runBlocking {
                     val repo = HafalanApp.get().repository
-                    Triple(repo.currentState(), repo.scriptEdition(), repo.widgetAppearance())
+                    WidgetSnapshot(
+                        state = repo.currentState(),
+                        script = repo.scriptEdition(),
+                        appearance = repo.widgetAppearance(),
+                        showMalay = repo.widgetShowMalay(),
+                    )
                 }
             }.getOrNull()
 
-            val appearance = snapshot?.third ?: WidgetAppearance.defaultFor(AppThemeMode.DARK)
+            val appearance = snapshot?.appearance ?: WidgetAppearance.defaultFor(AppThemeMode.DARK)
             val darkSurface = appearance.isDarkSurface()
             val textColor = if (darkSurface) 0xFFF8F4EC.toInt() else 0xFF102A1F.toInt()
             val mutedColor = if (darkSurface) 0xFFB7C4B8.toInt() else 0xFF5A6B5E.toInt()
 
             // ARGB background from persisted color + opacity.
             views.setInt(R.id.widget_root, "setBackgroundColor", appearance.argb())
+            views.setTextColor(R.id.widget_lang, textColor)
             views.setTextColor(R.id.widget_surah, mutedColor)
             views.setTextColor(R.id.widget_ayah_meta, mutedColor)
             views.setTextColor(R.id.widget_ayah_text, textColor)
             views.setTextColor(R.id.widget_stop, mutedColor)
+            views.setTextColor(R.id.widget_prev, textColor)
+            views.setTextColor(R.id.widget_next, textColor)
             views.setTextColor(R.id.widget_hint, mutedColor)
 
             val ayahMetrics = ayahTileMetrics(appWidgetManager, appWidgetId)
 
-            val ayahText: CharSequence = if (snapshot == null) {
+            val showMalay = snapshot?.showMalay == true
+            views.setTextViewText(
+                R.id.widget_lang,
+                context.getString(if (showMalay) R.string.widget_show_arabic else R.string.widget_show_malay),
+            )
+            views.setContentDescription(
+                R.id.widget_lang,
+                context.getString(if (showMalay) R.string.widget_show_arabic else R.string.widget_show_malay),
+            )
+
+            val ayahText: CharSequence
+            val rtl: Boolean
+            val typeface: Typeface
+            val minReadableSp: Float
+            if (snapshot == null) {
                 views.setTextViewText(R.id.widget_surah, context.getString(R.string.widget_empty))
                 views.setTextViewText(R.id.widget_ayah_meta, "")
-                "…"
+                ayahText = "…"
+                rtl = true
+                typeface = WidgetAyahFont.uthmanicTypeface(context)
+                minReadableSp = MIN_ARABIC_SP
+            } else if (showMalay) {
+                val state = snapshot.state
+                val surah = SurahCatalog.get(state.surahNumber)
+                views.setTextViewText(
+                    R.id.widget_surah,
+                    "${surah.nameTransliterated} · Ayah ${state.ayahNumber}/${surah.ayahCount}",
+                )
+                views.setTextViewText(R.id.widget_ayah_meta, "")
+                ayahText = state.cachedMalayText.ifBlank {
+                    context.getString(R.string.widget_translation_missing)
+                }
+                rtl = false
+                typeface = Typeface.SANS_SERIF
+                minReadableSp = MIN_MALAY_SP
             } else {
-                val (state, script, _) = snapshot
+                val state = snapshot.state
                 val surah = SurahCatalog.get(state.surahNumber)
                 views.setTextViewText(
                     R.id.widget_surah,
@@ -178,11 +276,13 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                         "Ayah ${state.ayahNumber}/${surah.ayahCount}",
                 )
                 views.setTextViewText(R.id.widget_ayah_meta, "")
-                ayahDisplayText(state.cachedAyahText, script, textColor, darkSurface)
+                ayahText = ayahDisplayText(state.cachedAyahText, snapshot.script, textColor, darkSurface)
+                rtl = true
+                typeface = WidgetAyahFont.uthmanicTypeface(context)
+                minReadableSp = MIN_ARABIC_SP
             }
 
-            // Same bundled KFGQPC Uthmanic Hafs as Compose — not the thin system Arabic face.
-            WidgetAyahFont.apply(
+            val rendered = WidgetAyahFont.apply(
                 context = context,
                 views = views,
                 text = ayahText,
@@ -191,6 +291,16 @@ class HafalanWidgetProvider : AppWidgetProvider() {
                 heightDp = ayahMetrics.heightDp,
                 maxLines = ayahMetrics.maxLines,
                 maxSp = ayahMetrics.maxSp,
+                minReadableSp = minReadableSp,
+                rtl = rtl,
+                typeface = typeface,
+                scrollOffsetPx = WidgetAutoScroll.offsetPx(),
+            )
+            WidgetAutoScroll.onRendered(
+                context = context,
+                contentHeightPx = rendered.contentHeightPx,
+                viewportHeightPx = rendered.viewportHeightPx,
+                overflows = rendered.overflows,
             )
 
             // Far left Stop; ayah / far-right Listen. Do not bind play on the root —
@@ -198,6 +308,33 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             val playPending = playPendingIntent(context, appWidgetId)
             val stopPending = stopPendingIntent(context, appWidgetId)
             views.setOnClickPendingIntent(R.id.widget_stop, stopPending)
+            views.setOnClickPendingIntent(
+                R.id.widget_lang,
+                actionPendingIntent(
+                    context,
+                    appWidgetId,
+                    ACTION_WIDGET_TOGGLE_LANG,
+                    appWidgetId + LANG_REQUEST_OFFSET,
+                ),
+            )
+            views.setOnClickPendingIntent(
+                R.id.widget_prev,
+                actionPendingIntent(
+                    context,
+                    appWidgetId,
+                    ACTION_WIDGET_PREV,
+                    appWidgetId + PREV_REQUEST_OFFSET,
+                ),
+            )
+            views.setOnClickPendingIntent(
+                R.id.widget_next,
+                actionPendingIntent(
+                    context,
+                    appWidgetId,
+                    ACTION_WIDGET_NEXT,
+                    appWidgetId + NEXT_REQUEST_OFFSET,
+                ),
+            )
             views.setOnClickPendingIntent(R.id.widget_surah, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_meta, playPending)
             views.setOnClickPendingIntent(R.id.widget_ayah_area, playPending)
@@ -212,6 +349,16 @@ class HafalanWidgetProvider : AppWidgetProvider() {
          * Interior size for the ayah area (widget tile minus chrome/padding) so
          * TextView auto-size / Bitmap rasterization fill the resized tile.
          */
+        private data class WidgetSnapshot(
+            val state: HafalanState,
+            val script: ScriptEdition,
+            val appearance: WidgetAppearance,
+            val showMalay: Boolean,
+        )
+
+        private const val MIN_ARABIC_SP = 18f
+        private const val MIN_MALAY_SP = 15f
+
         private data class AyahTileMetrics(
             val widthDp: Int,
             val heightDp: Int,
@@ -231,8 +378,8 @@ class HafalanWidgetProvider : AppWidgetProvider() {
             val heightDp = maxOf(minH, maxH).coerceAtLeast(40)
             val widthDp = maxOf(minW, maxW).coerceAtLeast(48)
 
-            // Chrome: padding 4+3 + surah ~14 + hint ~12 ≈ 33dp; side padding 6+6.
-            val ayahHeightDp = (heightDp - 33).coerceAtLeast(36)
+            // Chrome: padding 4+3 + header ~22 + stop/arrow row ~28; side padding 6+6.
+            val ayahHeightDp = (heightDp - 57).coerceAtLeast(36)
             val ayahWidthDp = (widthDp - 12).coerceAtLeast(40)
 
             val maxSp = (heightDp / 2.6f).coerceIn(28f, 72f)
