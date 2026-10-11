@@ -12,6 +12,8 @@ data class AyahContent(
     val ayahNumber: Int,
     val textArabic: String,
     val audioUrl: String?,
+    /** Abdullah Muhammad Basmeih (Malay). Empty when it could not be loaded. */
+    val textMalay: String = "",
 )
 
 data class HafalanState(
@@ -23,6 +25,8 @@ data class HafalanState(
     val rememberedForCurrent: Boolean = false,
     /** Cached Arabic text for the widget / offline display. */
     val cachedAyahText: String = "",
+    /** Cached Basmeih Malay translation for the app and widget. */
+    val cachedMalayText: String = "",
 )
 
 /** Supported Al-Afasy playback rates (persisted and applied for app + widget). */

@@ -2,6 +2,7 @@ package com.quranwidget.hafalan.data
 
 import android.content.Context
 import com.quranwidget.hafalan.widget.HafalanWidgetProvider
+import com.quranwidget.hafalan.widget.WidgetAutoScroll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -95,10 +96,39 @@ class HafalanRepository(
             lastActivityDate = today,
             rememberedForCurrent = false,
             cachedAyahText = "",
+            cachedMalayText = "",
         )
         preferences.save(next)
-        refreshAyahTextLocked(next, force = true)
-        notifyWidget()
+        refreshAyahTextLocked(next, force = true, notify = false)
+        notifyWidget(resetScroll = true)
+    }
+
+    /**
+     * Jump within the current surah. Resets the daily date so the next morning
+     * does not skip past the ayah the user just chose.
+     * @return true when the ayah number changed.
+     */
+    suspend fun selectAyah(ayahNumber: Int): Boolean = mutex.withLock {
+        val current = preferences.stateFlow.first()
+        val surah = SurahCatalog.get(current.surahNumber)
+        val target = ayahNumber.coerceIn(1, surah.ayahCount)
+        if (target == current.ayahNumber) return@withLock false
+        val next = current.copy(
+            ayahNumber = target,
+            lastActivityDate = LocalDate.now().toString(),
+            rememberedForCurrent = false,
+            cachedAyahText = "",
+            cachedMalayText = "",
+        )
+        preferences.save(next)
+        refreshAyahTextLocked(next, force = true, notify = false)
+        notifyWidget(resetScroll = true)
+        true
+    }
+
+    suspend fun moveAyahBy(delta: Int): Boolean {
+        val current = preferences.stateFlow.first()
+        return selectAyah(current.ayahNumber + delta)
     }
 
     suspend fun markRemembered() = mutex.withLock {
@@ -108,25 +138,35 @@ class HafalanRepository(
         val surah = SurahCatalog.get(current.surahNumber)
         val nextAyah = (current.ayahNumber + 1).coerceAtMost(surah.ayahCount)
         val today = LocalDate.now().toString()
+        val ayahChanged = nextAyah != current.ayahNumber
         val next = current.copy(
             ayahNumber = nextAyah,
             lastActivityDate = today,
             rememberedForCurrent = true,
-            cachedAyahText = if (nextAyah == current.ayahNumber) current.cachedAyahText else "",
+            cachedAyahText = if (ayahChanged) "" else current.cachedAyahText,
+            cachedMalayText = if (ayahChanged) "" else current.cachedMalayText,
         )
         preferences.save(next)
-        refreshAyahTextLocked(next, force = nextAyah != current.ayahNumber)
-        notifyWidget()
+        refreshAyahTextLocked(next, force = ayahChanged, notify = false)
+        notifyWidget(resetScroll = ayahChanged)
     }
 
     suspend fun applyDailyAdvanceIfNeeded(): HafalanState = mutex.withLock {
-        val updated = applyDailyAdvanceLocked(preferences.stateFlow.first())
+        val before = preferences.stateFlow.first()
+        val updated = applyDailyAdvanceLocked(before)
         preferences.save(updated)
-        if (updated.cachedAyahText.isBlank()) {
-            refreshAyahTextLocked(updated, force = true)
+        if (updated.cachedAyahText.isBlank() || updated.cachedMalayText.isBlank()) {
+            refreshAyahTextLocked(updated, force = false, notify = false)
         }
-        notifyWidget()
-        updated
+        notifyWidget(resetScroll = updated.ayahNumber != before.ayahNumber)
+        preferences.stateFlow.first()
+    }
+
+    suspend fun widgetShowMalay(): Boolean = preferences.widgetShowMalay()
+
+    suspend fun toggleWidgetMalay() = mutex.withLock {
+        preferences.setWidgetShowMalay(!preferences.widgetShowMalay())
+        notifyWidget(resetScroll = true)
     }
 
     suspend fun refreshAyahText(force: Boolean = false): AyahContent = mutex.withLock {
@@ -136,8 +176,13 @@ class HafalanRepository(
     suspend fun loadAyahForPlayback(): AyahContent {
         val current = applyDailyAdvanceIfNeeded()
         val script = preferences.scriptEdition()
+        val malay = preferences.stateFlow.first().cachedMalayText
         return withContext(Dispatchers.IO) {
-            api.fetchAyahOrFallback(current.surahNumber, current.ayahNumber, script)
+            val ayah = api.fetchAyahOrFallback(current.surahNumber, current.ayahNumber, script)
+            val translation = malay.ifBlank {
+                runCatching { api.fetchMalay(current.surahNumber, current.ayahNumber) }.getOrDefault("")
+            }
+            ayah.copy(textMalay = translation)
         }
     }
 
@@ -155,7 +200,7 @@ class HafalanRepository(
             refreshAyahTextLocked(preferences.stateFlow.first(), force = true, notify = false)
         }
         // Push RemoteViews after the lock so the widget always sees the new script + text.
-        notifyWidget()
+        notifyWidget(resetScroll = true)
     }
 
     suspend fun repeatCount(): Int = preferences.repeatCount()
@@ -222,6 +267,7 @@ class HafalanRepository(
             lastActivityDate = backup.lastActivityDate.ifBlank { LocalDate.now().toString() },
             rememberedForCurrent = backup.rememberedForCurrent,
             cachedAyahText = "",
+            cachedMalayText = "",
         )
         preferences.restoreProgress(
             rememberedKeys = backup.rememberedAyahs,
@@ -229,7 +275,7 @@ class HafalanRepository(
             scriptEditionId = backup.scriptEditionId,
         )
         refreshAyahTextLocked(restored, force = true, notify = false)
-        notifyWidget()
+        notifyWidget(resetScroll = true)
     }
 
     private fun buildProgressSummary(keys: Set<String>): ProgressSummary {
@@ -252,23 +298,36 @@ class HafalanRepository(
         force: Boolean,
         notify: Boolean = true,
     ): AyahContent {
-        if (!force && state.cachedAyahText.isNotBlank()) {
-            return AyahContent(
-                surahNumber = state.surahNumber,
-                ayahNumber = state.ayahNumber,
-                textArabic = state.cachedAyahText,
-                audioUrl = null,
-            )
+        val arabic = if (!force && state.cachedAyahText.isNotBlank()) {
+            state.cachedAyahText
+        } else {
+            val script = preferences.scriptEdition()
+            withContext(Dispatchers.IO) {
+                api.fetchAyahOrFallback(state.surahNumber, state.ayahNumber, script).textArabic
+            }
         }
-        val script = preferences.scriptEdition()
-        val ayah = withContext(Dispatchers.IO) {
-            api.fetchAyahOrFallback(state.surahNumber, state.ayahNumber, script)
+        val malay = if (!force && state.cachedMalayText.isNotBlank()) {
+            state.cachedMalayText
+        } else {
+            val fetched = withContext(Dispatchers.IO) {
+                runCatching { api.fetchMalay(state.surahNumber, state.ayahNumber) }.getOrNull()
+            }
+            fetched?.takeIf { it.isNotBlank() } ?: state.cachedMalayText
         }
-        preferences.save(state.copy(cachedAyahText = ayah.textArabic))
+        val saved = state.copy(cachedAyahText = arabic, cachedMalayText = malay)
+        if (saved != state) {
+            preferences.save(saved)
+        }
         if (notify) {
             notifyWidget()
         }
-        return ayah
+        return AyahContent(
+            surahNumber = state.surahNumber,
+            ayahNumber = state.ayahNumber,
+            textArabic = arabic,
+            audioUrl = null,
+            textMalay = malay,
+        )
     }
 
     /**
@@ -306,10 +365,12 @@ class HafalanRepository(
             lastActivityDate = today.toString(),
             rememberedForCurrent = remembered,
             cachedAyahText = if (textChanged) "" else state.cachedAyahText,
+            cachedMalayText = if (textChanged) "" else state.cachedMalayText,
         )
     }
 
-    private fun notifyWidget() {
+    private fun notifyWidget(resetScroll: Boolean = false) {
+        if (resetScroll) WidgetAutoScroll.reset()
         // Direct RemoteViews push (no ephemeral provider coroutine race).
         HafalanWidgetProvider.pushUpdate(appContext)
     }

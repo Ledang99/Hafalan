@@ -151,10 +151,80 @@ class QuranApi(
         }
     }
 
+    /**
+     * Malay meaning: Quran.com translation 39, Abdullah Muhammad Basmeih.
+     * Falls back to alquran.cloud edition `ms.basmeih`.
+     */
+    fun fetchMalay(surahNumber: Int, ayahNumber: Int): String {
+        return try {
+            fetchMalayFromQuranCom(surahNumber, ayahNumber)
+        } catch (_: Exception) {
+            fetchMalayFromAlQuranCloud(surahNumber, ayahNumber)
+        }
+    }
+
+    private fun fetchMalayFromQuranCom(surahNumber: Int, ayahNumber: Int): String {
+        val url =
+            "https://api.quran.com/api/v4/quran/translations/$MALAY_TRANSLATION_ID?verse_key=$surahNumber:$ayahNumber"
+        val request = Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IllegalStateException("Quran.com translation HTTP ${response.code}")
+            }
+            val body = response.body?.string().orEmpty()
+            val translations = JSONObject(body).optJSONArray("translations")
+                ?: throw IllegalStateException("No Malay translation array")
+            if (translations.length() == 0) {
+                throw IllegalStateException("No Malay translation for $surahNumber:$ayahNumber")
+            }
+            val text = translations.getJSONObject(0).optString("text")
+            return stripHtml(text).ifBlank { throw IllegalStateException("Empty Malay translation") }
+        }
+    }
+
+    private fun fetchMalayFromAlQuranCloud(surahNumber: Int, ayahNumber: Int): String {
+        val url = "https://api.alquran.cloud/v1/ayah/$surahNumber:$ayahNumber/ms.basmeih"
+        val request = Request.Builder().url(url).get().build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IllegalStateException("alquran.cloud Malay HTTP ${response.code}")
+            }
+            val body = response.body?.string().orEmpty()
+            val text = JSONObject(body).getJSONObject("data").optString("text")
+            return stripHtml(text).ifBlank { throw IllegalStateException("Empty Malay translation") }
+        }
+    }
+
+    private fun stripHtml(raw: String): String {
+        return raw
+            .replace(FOOTNOTE_TAG, "")
+            .replace(ANY_TAG, "")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&apos;", "'")
+            .replace("&amp;", "&")
+            .replace("&nbsp;", " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
     companion object {
         /** Quran.com: Mishari Rashid al-`Afasy */
         const val ALAFASY_RECITATION_ID = 7
         const val VERSES_CDN_BASE = "https://verses.quran.com"
         const val RECITER_DISPLAY_NAME = "Sheikh Mishari Rashid Al-Afasy"
+
+        /** Quran.com: Abdullah Muhammad Basmeih, Malay. */
+        const val MALAY_TRANSLATION_ID = 39
+
+        private val FOOTNOTE_TAG = Regex(
+            """<sup[^>]*>.*?</sup>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
+        private val ANY_TAG = Regex("""<[^>]+>""")
     }
 }

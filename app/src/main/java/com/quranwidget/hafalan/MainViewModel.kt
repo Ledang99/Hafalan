@@ -195,6 +195,32 @@ class MainViewModel(
         }
     }
 
+    fun moveAyah(delta: Int) {
+        viewModelScope.launch {
+            loading.value = true
+            error.value = null
+            runCatching {
+                repository.moveAyahBy(delta)
+            }.onFailure {
+                error.value = it.message ?: "Could not change ayah"
+            }
+            loading.value = false
+        }
+    }
+
+    fun selectAyah(ayahNumber: Int) {
+        viewModelScope.launch {
+            loading.value = true
+            error.value = null
+            runCatching {
+                repository.selectAyah(ayahNumber)
+            }.onFailure {
+                error.value = it.message ?: "Could not change ayah"
+            }
+            loading.value = false
+        }
+    }
+
     fun setPlaybackSpeed(speed: Float) {
         viewModelScope.launch {
             repository.setPlaybackSpeed(speed)
