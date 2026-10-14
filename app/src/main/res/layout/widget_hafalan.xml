@@ -70,16 +70,19 @@
             android:scaleType="fitCenter"
             android:visibility="gone" />
 
-        <!-- Slow vertical scroll of KFGQPC (or Malay) frames when the ayah is long. -->
+        <!--
+          Scrolls long ayah frames. Do not set inAnimation/outAnimation here:
+          AdapterViewFlipper loads those with AnimatorInflater and casts to
+          ObjectAnimator. A view <translate> animation crashes inflation and
+          the launcher shows "Can't load widget". Defaults are alpha fades.
+        -->
         <AdapterViewFlipper
             android:id="@+id/widget_ayah_flipper"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:autoStart="true"
             android:flipInterval="2400"
-            android:inAnimation="@anim/widget_ayah_in"
-            android:loopViews="true"
-            android:outAnimation="@anim/widget_ayah_out" />
+            android:loopViews="true" />
 
         <LinearLayout
             android:id="@+id/widget_privacy"

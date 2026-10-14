@@ -4,8 +4,8 @@
 Android home-screen widget for daily Quran hafalan, driven by a small companion app.
 
 ## Version
-- `versionName` **1.13** · `versionCode` **113**
-- Progress screen footer shows `Version 1.13`
+- `versionName` **1.14** · `versionCode` **114**
+- Progress screen footer shows `Version 1.14`
 
 ## Decisions
 - Platform: Android App Widget + main app
