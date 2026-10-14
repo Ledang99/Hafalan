@@ -79,8 +79,11 @@ class HafalanRepository(
 
     init {
         scope.launch {
-            applyDailyAdvanceIfNeeded()
-            refreshAyahText(force = false)
+            // A failed refresh or widget push must not kill the process on open.
+            runCatching {
+                applyDailyAdvanceIfNeeded()
+                refreshAyahText(force = false)
+            }
         }
     }
 

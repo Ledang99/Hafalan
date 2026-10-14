@@ -12,7 +12,8 @@ class HafalanApp : Application() {
         super.onCreate()
         instance = this
         repository = HafalanRepository(this)
-        WidgetUnlockMonitor.register(this)
+        // Privacy listener is optional. A failure here must not block the UI.
+        runCatching { WidgetUnlockMonitor.register(this) }
     }
 
     companion object {
