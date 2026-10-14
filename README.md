@@ -2,7 +2,7 @@
 
 Android MVP: home-screen widget + small app for daily Quran hafalan (memorization).
 
-Pick a surah, see the current ayah in Arabic (Uthmani or Simple via Quran.com), listen with Sheikh **Mishari Rashid Al-Afasy**, mark **Remembered** when it sits with you, track Progress, and keep a calm home-screen widget in sync.
+Pick a surah, see the current ayah in Arabic (Uthmani King Fahad Complex or Tajweed), listen with Sheikh **Mishari Rashid Al-Afasy**, mark **Remembered** when it sits with you, track Progress, and keep a calm home-screen widget in sync.
 
 Tone is intentionally quiet — one small piece at a time (feel inspired by companions like Tasmi; this app stays Android widget-first and does not clone streak/journey flows).
 
@@ -16,10 +16,35 @@ On GitHub: open [`releases/hafalan-v1.15.apk`](https://github.com/Ledang99/Hafal
 
 Install: allow install from this source if Android asks, then add the **Hafalan ayah** widget from the home-screen widget picker.
 
+## What’s in v1.15
+
+Features added:
+
+- **Bahasa Melayu (Basmeih)** under the Arabic ayah in the app
+- Widget **middle / Terjemahan** flips Arabic and Malay
+- Widget **auto-scroll** when an ayah is too long
+- **Previous / Next** ayah (not only starting at ayah 1)
+- After unlock, the widget shows the **Hafalan** mark until you tap it
+- Repeat **Off / 3× / 6× / 9×** (stops after that count)
+- Widget **Stop** (left) and **Tap to listen** (right)
+- Listen screen **Repeat** and **Close**
+- Uthmani (King Fahad Complex) and **Tajweed** only
+- Resizable widget, background color, transparency, Day / Dark
+- Progress **Backup / Restore**, per-surah % and overall %
+- Playback speed **1× / 1.5× / 2×**
+
+Fixes:
+
+- App no longer crashes on open (lock-screen listener removed)
+- Widget loads again (bad flip animation removed)
+- Widget Arabic keeps the same letter shape as the app (no stretch)
+- Widget uses the same KFGQPC Uthmanic Hafs font as the app
+- Widget tap plays audio without a black screen
+
 ## Features (MVP)
 
 - Choose any of the 114 surahs
-- Show current ayah with **Uthmani / Simple** script toggle (persisted; updates app + widget)
+- Show current ayah with **Uthmani / Tajweed** (King Fahad Complex font; persisted; updates app + widget)
 - **Remembered** advances the active target, records the ayah in history, and updates the widget
 - **Progress** screen: per-surah % and overall % vs 6236 ayahs
 - **Backup / Restore** on Progress: export or replace memorization progress via a JSON file (SAF)
