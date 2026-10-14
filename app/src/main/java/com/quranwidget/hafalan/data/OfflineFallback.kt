@@ -15,6 +15,22 @@ object OfflineFallback {
         7 to "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
     )
 
+    /** Abdullah Muhammad Basmeih, used when both translation endpoints fail. */
+    val fatihahMalay: Map<Int, String> = mapOf(
+        1 to "Dengan nama Allah, Yang Maha Pemurah, lagi Maha Mengasihani.",
+        2 to "Segala puji tertentu bagi Allah, Tuhan yang memelihara dan mentadbirkan sekalian alam.",
+        3 to "Yang Maha Pemurah, lagi Maha Mengasihani.",
+        4 to "Yang Menguasai pemerintahan hari Pembalasan (hari Akhirat).",
+        5 to "Engkaulah sahaja (Ya Allah) Yang Kami sembah, dan kepada Engkaulah sahaja kami memohon pertolongan.",
+        6 to "Tunjukilah kami jalan yang lurus.",
+        7 to "Iaitu jalan orang-orang yang Engkau telah kurniakan nikmat kepada mereka, bukan (jalan) orang-orang yang Engkau telah murkai, dan bukan pula (jalan) orang-orang yang sesat.",
+    )
+
+    fun malay(surahNumber: Int, ayahNumber: Int): String? {
+        if (surahNumber != 1) return null
+        return fatihahMalay[ayahNumber]
+    }
+
     fun ayah(surahNumber: Int, ayahNumber: Int): AyahContent? {
         if (surahNumber != 1) return null
         val text = fatihah[ayahNumber] ?: return null
@@ -25,6 +41,7 @@ object OfflineFallback {
             ayahNumber = ayahNumber,
             textArabic = text,
             audioUrl = "${QuranApi.VERSES_CDN_BASE}/Alafasy/mp3/$s$a.mp3",
+            textMalay = fatihahMalay[ayahNumber],
         )
     }
 }

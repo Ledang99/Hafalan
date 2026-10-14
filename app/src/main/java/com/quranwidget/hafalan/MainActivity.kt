@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
                     onDismissSurahPicker = viewModel::closeSurahPicker,
                     onSurahSelected = viewModel::selectSurah,
                     onRemembered = viewModel::markRemembered,
+                    onStepAyah = viewModel::stepAyah,
                     onPlay = ::openPlayer,
                     onPlaybackSpeed = viewModel::setPlaybackSpeed,
                     onScriptEdition = viewModel::setScriptEdition,

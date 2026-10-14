@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
@@ -78,6 +79,122 @@ object WidgetAyahFont {
         views.setImageViewBitmap(R.id.widget_ayah_image, bitmap)
     }
 
+    /**
+     * One bitmap when the ayah fits. Several viewport slices when it does not,
+     * so a widget flipper can scroll the full KFGQPC (or Malay) text.
+     */
+    fun renderFrames(
+        context: Context,
+        text: CharSequence,
+        textColor: Int,
+        widthDp: Int,
+        heightDp: Int,
+        maxSp: Float,
+        useUthmanic: Boolean,
+    ): List<Bitmap> {
+        val typeface = if (useUthmanic) {
+            uthmanicTypeface(context)
+        } else {
+            Typeface.create("sans-serif", Typeface.NORMAL)
+        }
+        val metrics = context.resources.displayMetrics
+        val density = metrics.density * context.resources.configuration.fontScale
+        var widthPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            widthDp.coerceAtLeast(48).toFloat(),
+            metrics,
+        ).toInt().coerceAtLeast(1)
+        var heightPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            heightDp.coerceAtLeast(40).toFloat(),
+            metrics,
+        ).toInt().coerceAtLeast(1)
+        // Cap so a tall tile cannot blow the binder when several frames are sent.
+        if (widthPx > 900) {
+            val scale = 900f / widthPx
+            widthPx = 900
+            heightPx = (heightPx * scale).toInt().coerceAtLeast(1)
+        }
+        if (heightPx > 640) heightPx = 640
+
+        val safeMax = maxSp.coerceIn(12f, 72f)
+        var lo = 12f
+        var hi = safeMax
+        var best = 12f
+        var fits = false
+        repeat(14) {
+            val mid = (lo + hi) / 2f
+            if (layoutFits(text, typeface, textColor, mid, widthPx, heightPx, 12, density)) {
+                fits = true
+                best = mid
+                lo = mid
+            } else {
+                hi = mid
+            }
+        }
+        if (fits) {
+            return listOf(
+                renderBitmap(
+                    text = text,
+                    typeface = typeface,
+                    defaultColor = textColor,
+                    widthPx = widthPx,
+                    heightPx = heightPx,
+                    maxLines = 12,
+                    minSp = 12f,
+                    maxSp = best.coerceAtLeast(12f),
+                    density = density,
+                ),
+            )
+        }
+
+        val readable = 18f.coerceIn(14f, safeMax)
+        val full = buildLayout(
+            text = text,
+            typeface = typeface,
+            defaultColor = textColor,
+            sizeSp = readable,
+            widthPx = widthPx,
+            maxLines = 200,
+            density = density,
+            ellipsize = null,
+        )
+        if (full.height <= heightPx) {
+            val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val dy = ((heightPx - full.height) / 2f).coerceAtLeast(0f)
+            canvas.save()
+            canvas.translate(0f, dy)
+            full.draw(canvas)
+            canvas.restore()
+            return listOf(bitmap)
+        }
+
+        val maxStart = (full.height - heightPx).coerceAtLeast(0)
+        val step = (heightPx * 0.68f).toInt().coerceIn(1, heightPx)
+        val starts = ArrayList<Int>()
+        var y = 0
+        while (starts.size < 24) {
+            starts.add(y)
+            if (y >= maxStart) break
+            val next = (y + step).coerceAtMost(maxStart)
+            if (next == y) break
+            y = next
+        }
+        if (starts.last() != maxStart) {
+            starts.add(maxStart)
+        }
+        return starts.map { scrollY ->
+            val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.save()
+            canvas.translate(0f, -scrollY.toFloat())
+            full.draw(canvas)
+            canvas.restore()
+            bitmap
+        }
+    }
+
     private fun renderBitmap(
         text: CharSequence,
         typeface: Typeface,
@@ -123,7 +240,9 @@ object WidgetAyahFont {
         maxLines: Int,
         density: Float,
     ): Boolean {
-        val layout = buildLayout(text, typeface, defaultColor, sizeSp, widthPx, maxLines, density)
+        val layout = buildLayout(
+            text, typeface, defaultColor, sizeSp, widthPx, maxLines, density,
+        )
         if (layout.height > heightPx) return false
         if (layout.lineCount > maxLines) return false
         if (layout.lineCount >= maxLines) {
@@ -142,6 +261,7 @@ object WidgetAyahFont {
         widthPx: Int,
         maxLines: Int,
         density: Float,
+        ellipsize: TextUtils.TruncateAt? = TextUtils.TruncateAt.END,
     ): StaticLayout {
         val paint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
@@ -149,13 +269,15 @@ object WidgetAyahFont {
             textSize = sizeSp * density
             isSubpixelText = true
         }
-        return StaticLayout.Builder
+        val builder = StaticLayout.Builder
             .obtain(text, 0, text.length, paint, widthPx.coerceAtLeast(1))
             .setAlignment(Layout.Alignment.ALIGN_CENTER)
             .setIncludePad(false)
             .setLineSpacing(0f, 1.05f)
             .setMaxLines(maxLines)
-            .setEllipsize(android.text.TextUtils.TruncateAt.END)
-            .build()
+        if (ellipsize != null) {
+            builder.setEllipsize(ellipsize)
+        }
+        return builder.build()
     }
 }

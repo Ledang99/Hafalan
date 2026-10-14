@@ -95,6 +95,7 @@ class HafalanRepository(
             lastActivityDate = today,
             rememberedForCurrent = false,
             cachedAyahText = "",
+            cachedMalayText = "",
         )
         preferences.save(next)
         refreshAyahTextLocked(next, force = true)
@@ -108,14 +109,67 @@ class HafalanRepository(
         val surah = SurahCatalog.get(current.surahNumber)
         val nextAyah = (current.ayahNumber + 1).coerceAtMost(surah.ayahCount)
         val today = LocalDate.now().toString()
+        val sameAyah = nextAyah == current.ayahNumber
         val next = current.copy(
             ayahNumber = nextAyah,
             lastActivityDate = today,
             rememberedForCurrent = true,
-            cachedAyahText = if (nextAyah == current.ayahNumber) current.cachedAyahText else "",
+            cachedAyahText = if (sameAyah) current.cachedAyahText else "",
+            cachedMalayText = if (sameAyah) current.cachedMalayText else "",
         )
         preferences.save(next)
         refreshAyahTextLocked(next, force = nextAyah != current.ayahNumber)
+        notifyWidget()
+    }
+
+    /**
+     * Move the active target to the previous or next ayah inside the current surah.
+     * Does not add to the remembered set — only [markRemembered] does that.
+     * Widget follows because the shared pointer is what it renders.
+     */
+    suspend fun stepAyah(delta: Int) = mutex.withLock {
+        if (delta == 0) return@withLock
+        val advanced = applyDailyAdvanceLocked(preferences.stateFlow.first())
+        val surah = SurahCatalog.get(advanced.surahNumber)
+        val target = (advanced.ayahNumber + delta).coerceIn(1, surah.ayahCount)
+        val moved = target != advanced.ayahNumber
+        val today = LocalDate.now().toString()
+        val next = advanced.copy(
+            ayahNumber = target,
+            lastActivityDate = today,
+            rememberedForCurrent = if (moved) false else advanced.rememberedForCurrent,
+            cachedAyahText = if (moved) "" else advanced.cachedAyahText,
+            cachedMalayText = if (moved) "" else advanced.cachedMalayText,
+        )
+        preferences.save(next)
+        if (moved || next.cachedAyahText.isBlank() || next.cachedMalayText.isBlank()) {
+            refreshAyahTextLocked(next, force = moved || next.cachedAyahText.isBlank(), notify = false)
+        }
+        notifyWidget()
+    }
+
+    suspend fun isWidgetConcealed(): Boolean = preferences.widgetConcealed()
+
+    /** Hide the widget ayah (logo only). Main app is unchanged. */
+    suspend fun concealWidget() {
+        val changed = !preferences.widgetConcealed()
+        if (changed) {
+            preferences.setWidgetConcealed(true)
+            notifyWidget()
+        }
+    }
+
+    /** Middle-tap after unlock: show the ayah again. */
+    suspend fun revealWidget() {
+        if (preferences.widgetConcealed()) {
+            preferences.setWidgetConcealed(false)
+        }
+        notifyWidget()
+    }
+
+    /** Flip the widget ayah area between Arabic and Bahasa Melayu. */
+    suspend fun toggleWidgetTranslation() {
+        preferences.toggleWidgetShowMalay()
         notifyWidget()
     }
 
@@ -252,19 +306,45 @@ class HafalanRepository(
         force: Boolean,
         notify: Boolean = true,
     ): AyahContent {
-        if (!force && state.cachedAyahText.isNotBlank()) {
+        if (!force && state.cachedAyahText.isNotBlank() && state.cachedMalayText.isNotBlank()) {
             return AyahContent(
                 surahNumber = state.surahNumber,
                 ayahNumber = state.ayahNumber,
                 textArabic = state.cachedAyahText,
                 audioUrl = null,
+                textMalay = state.cachedMalayText,
+            )
+        }
+        if (!force && state.cachedAyahText.isNotBlank()) {
+            val malay = withContext(Dispatchers.IO) {
+                api.fetchMalayOrEmpty(state.surahNumber, state.ayahNumber)
+            }
+            val saved = if (malay.isNotBlank()) {
+                val updated = state.copy(cachedMalayText = malay)
+                preferences.save(updated)
+                updated
+            } else {
+                state
+            }
+            return AyahContent(
+                surahNumber = saved.surahNumber,
+                ayahNumber = saved.ayahNumber,
+                textArabic = saved.cachedAyahText,
+                audioUrl = null,
+                textMalay = saved.cachedMalayText.ifBlank { null },
             )
         }
         val script = preferences.scriptEdition()
         val ayah = withContext(Dispatchers.IO) {
             api.fetchAyahOrFallback(state.surahNumber, state.ayahNumber, script)
         }
-        preferences.save(state.copy(cachedAyahText = ayah.textArabic))
+        val malay = ayah.textMalay?.takeIf { it.isNotBlank() } ?: state.cachedMalayText
+        preferences.save(
+            state.copy(
+                cachedAyahText = ayah.textArabic,
+                cachedMalayText = malay,
+            ),
+        )
         if (notify) {
             notifyWidget()
         }
@@ -306,6 +386,7 @@ class HafalanRepository(
             lastActivityDate = today.toString(),
             rememberedForCurrent = remembered,
             cachedAyahText = if (textChanged) "" else state.cachedAyahText,
+            cachedMalayText = if (textChanged) "" else state.cachedMalayText,
         )
     }
 

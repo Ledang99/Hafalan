@@ -4,8 +4,8 @@
 Android home-screen widget for daily Quran hafalan, driven by a small companion app.
 
 ## Version
-- `versionName` **1.11** · `versionCode` **111**
-- Progress screen footer shows `Version 1.11`
+- `versionName` **1.12** · `versionCode` **112**
+- Progress screen footer shows `Version 1.12`
 
 ## Decisions
 - Platform: Android App Widget + main app
@@ -20,7 +20,11 @@ Android home-screen widget for daily Quran hafalan, driven by a small companion 
 - Widget background: color swatches + opacity 0–100% on Home (below play controls); ARGB applied via RemoteViews; text + tajweed palette follow background luminance (readable on light or dark)
 - Widget resize: `resizeMode=horizontal|vertical` with min/max resize; `onAppWidgetOptionsChanged` re-pushes RemoteViews; Arabic auto-size (12–56sp XML + size hint from tile height) fills the new size; meta stays secondary
 - Widget typography: Arabic uses **same bundled KFGQPC Uthmanic Hafs** as Compose (`res/font/uthmanic_hafs.ttf`). RemoteViews cannot set custom Typeface across processes, so the widget **rasterizes** ayah text into an ImageView bitmap
-- Widget controls (v1.11): far-left **Stop** PendingIntent → `AyahPlaybackService.ACTION_STOP` (cancels counted repeats / stops service); ayah area + far-right **Tap to listen** → play. Explicit left/right hit targets (not whole-widget-only)
+- Widget controls (v1.11+): far-left **Stop** → `AyahPlaybackService.ACTION_STOP`; far-right **Tap to listen** → play. v1.12 middle (ayah area + **Terjemahan**) toggles Arabic / Bahasa Melayu and does not start playback
+- Malay (v1.12): Quran.com translation resource **39** (Abdullah Muhammad Basmeih), fallback `ms.basmeih`. Shown under the Arabic ayah in the app. Cached with the current ayah only
+- Ayah navigation (v1.12): previous / next inside the current surah. Remembered still records the set and advances. Widget follows the shared pointer
+- Widget scroll (v1.12): if the ayah does not fit, KFGQPC (or Malay) bitmap slices advance in an `AdapterViewFlipper` so the full ayah is readable
+- Widget privacy (v1.12): `ACTION_USER_PRESENT` / screen off / keyguard change hides the ayah behind a Hafalan mark until the widget is tapped. Main app still shows the ayah
 - Widget script sync: chip changes refetch ayah text for the selected edition and **push RemoteViews immediately** (`pushUpdate`); widget reads `scriptEdition` and renders Uthmani (plain QPC Hafs) vs Tajweed (colored spans)
 - Progress: user picks surah; “Remembered” advances ayah **and** adds that ayah to a persisted remembered set; Progress screen shows per-surah % and overall % vs 6236; daily target still advances when not marked
 - Progress backup/restore: Progress screen **Backup** / **Restore** near the footer; exports JSON (`rememberedAyahs` + current surah/ayah pointer + optional script) via SAF CreateDocument; Restore confirms then replaces local progress via OpenDocument; percentages and current target match after restore

@@ -12,6 +12,8 @@ data class AyahContent(
     val ayahNumber: Int,
     val textArabic: String,
     val audioUrl: String?,
+    /** Bahasa Melayu (Basmeih). Null when the translation request failed. */
+    val textMalay: String? = null,
 )
 
 data class HafalanState(
@@ -23,6 +25,8 @@ data class HafalanState(
     val rememberedForCurrent: Boolean = false,
     /** Cached Arabic text for the widget / offline display. */
     val cachedAyahText: String = "",
+    /** Cached Bahasa Melayu (Basmeih) for the current ayah. */
+    val cachedMalayText: String = "",
 )
 
 /** Supported Al-Afasy playback rates (persisted and applied for app + widget). */

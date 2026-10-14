@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Compact chrome + auto-sizing KFGQPC Arabic so the ayah fills most of the
-  home-screen tile. Size bounds are refreshed in code on resize.
-
-  Note: android:fontFamily on TextView is preview-only — App Widget hosts
-  cannot apply app Typefaces via RemoteViews. HafalanWidgetProvider always
-  rasterizes ayah text with bundled uthmanic_hafs into widget_ayah_image.
-
-  Bottom row: far-left Stop cancels counted playback; far-right / ayah area
-  Listen starts AyahPlaybackService (same as prior whole-widget tap).
+  Bottom row: far-left Stop, center Terjemahan (middle toggle), far-right Listen.
+  The ayah area is the other middle hit target (Arabic / Malay flip, or reveal
+  after unlock). Listen stays a wrap-content target so it does not swallow the center.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -21,7 +15,6 @@
     android:paddingTop="4dp"
     android:paddingBottom="3dp">
 
-    <!-- Single compact meta line (surah + ayah index). -->
     <TextView
         android:id="@+id/widget_surah"
         android:layout_width="match_parent"
@@ -33,16 +26,14 @@
         android:textColor="@color/widget_muted"
         android:textSize="10sp" />
 
-    <!-- Kept for id stability; height collapsed — meta lives in widget_surah. -->
     <TextView
         android:id="@+id/widget_ayah_meta"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:visibility="gone"
         android:textColor="@color/widget_muted"
-        android:textSize="1sp" />
+        android:textSize="1sp"
+        android:visibility="gone" />
 
-    <!-- Ayah shown as ImageView bitmap (bundled KFGQPC); TextView kept for ids/preview. -->
     <FrameLayout
         android:id="@+id/widget_ayah_area"
         android:layout_width="match_parent"
@@ -62,7 +53,6 @@
             android:fontFamily="@font/uthmanic_hafs"
             android:gravity="center"
             android:includeFontPadding="false"
-            android:lineSpacingExtra="0dp"
             android:lineSpacingMultiplier="1.05"
             android:maxLines="8"
             android:textAlignment="center"
@@ -77,10 +67,58 @@
             android:layout_height="match_parent"
             android:adjustViewBounds="true"
             android:contentDescription="@null"
-            android:scaleType="fitCenter" />
+            android:scaleType="fitCenter"
+            android:visibility="gone" />
+
+        <!-- Slow vertical scroll of KFGQPC (or Malay) frames when the ayah is long. -->
+        <AdapterViewFlipper
+            android:id="@+id/widget_ayah_flipper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:autoStart="true"
+            android:flipInterval="2400"
+            android:inAnimation="@anim/widget_ayah_in"
+            android:loopViews="true"
+            android:outAnimation="@anim/widget_ayah_out" />
+
+        <LinearLayout
+            android:id="@+id/widget_privacy"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/widget_privacy_mark"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_hafalan_mark" />
+
+            <TextView
+                android:id="@+id/widget_privacy_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:paddingTop="2dp"
+                android:text="@string/app_name"
+                android:textColor="@color/widget_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_privacy_hint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:paddingTop="1dp"
+                android:text="@string/widget_tap_to_reveal"
+                android:textColor="@color/widget_muted"
+                android:textSize="10sp" />
+        </LinearLayout>
     </FrameLayout>
 
-    <!-- Far left = Stop; far right = Listen (ayah area also listens). -->
     <LinearLayout
         android:id="@+id/widget_controls"
         android:layout_width="match_parent"
@@ -94,25 +132,37 @@
             android:layout_height="wrap_content"
             android:includeFontPadding="false"
             android:paddingStart="2dp"
-            android:paddingEnd="10dp"
-            android:paddingTop="2dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="12dp"
             android:paddingBottom="2dp"
             android:text="@string/playback_stop"
             android:textColor="@color/widget_muted"
-            android:textSize="9sp" />
+            android:textSize="11sp" />
 
         <TextView
-            android:id="@+id/widget_hint"
+            android:id="@+id/widget_middle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:paddingTop="4dp"
+            android:paddingBottom="2dp"
+            android:text="@string/widget_translation"
+            android:textColor="@color/widget_muted"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/widget_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:gravity="end"
             android:includeFontPadding="false"
-            android:paddingStart="8dp"
-            android:paddingTop="2dp"
+            android:paddingStart="12dp"
+            android:paddingTop="4dp"
             android:paddingBottom="2dp"
             android:text="@string/tap_to_play"
             android:textColor="@color/widget_muted"
-            android:textSize="9sp" />
+            android:textSize="11sp" />
     </LinearLayout>
 </LinearLayout>

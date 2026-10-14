@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit
  *   CDN base: https://verses.quran.com/
  *
  * Fallback: alquran.cloud edition `ar.alafasy` (same reciter), then bundled Al-Fatihah text.
+ *
+ * Bahasa Melayu: Quran.com translation resource 39 (Abdullah Muhammad Basmeih),
+ * fallback alquran.cloud edition `ms.basmeih`. Cached with the ayah; not a second app.
  */
 class QuranApi(
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -65,7 +68,66 @@ class QuranApi(
             ayahNumber = ayahNumber,
             textArabic = text,
             audioUrl = audioUrl,
+            textMalay = fetchMalayOrEmpty(surahNumber, ayahNumber),
         )
+    }
+
+    /**
+     * Bahasa Melayu (Basmeih). Never throws — Arabic load must succeed without it.
+     * Blank when both public endpoints fail (caller may still use the offline bundle).
+     */
+    fun fetchMalayOrEmpty(surahNumber: Int, ayahNumber: Int): String {
+        val fromNet = try {
+            fetchMalayFromQuranCom(surahNumber, ayahNumber)
+        } catch (_: Exception) {
+            try {
+                fetchMalayFromAlQuranCloud(surahNumber, ayahNumber)
+            } catch (_: Exception) {
+                ""
+            }
+        }
+        if (fromNet.isNotBlank()) return fromNet
+        return OfflineFallback.malay(surahNumber, ayahNumber).orEmpty()
+    }
+
+    private fun fetchMalayFromQuranCom(surahNumber: Int, ayahNumber: Int): String {
+        val url =
+            "https://api.quran.com/api/v4/quran/translations/$BASMEIH_RESOURCE_ID?verse_key=$surahNumber:$ayahNumber"
+        val request = Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IllegalStateException("Quran.com translation HTTP ${response.code}")
+            }
+            val body = response.body?.string().orEmpty()
+            val translations = JSONObject(body).optJSONArray("translations")
+                ?: throw IllegalStateException("No translations array")
+            if (translations.length() == 0) {
+                throw IllegalStateException("Empty Malay translation")
+            }
+            val raw = translations.getJSONObject(0).optString("text")
+            val text = stripTranslationMarkup(raw)
+            if (text.isBlank()) throw IllegalStateException("Blank Malay translation")
+            return text
+        }
+    }
+
+    private fun fetchMalayFromAlQuranCloud(surahNumber: Int, ayahNumber: Int): String {
+        val url = "https://api.alquran.cloud/v1/ayah/$surahNumber:$ayahNumber/ms.basmeih"
+        val request = Request.Builder().url(url).get().build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IllegalStateException("alquran.cloud ms.basmeih HTTP ${response.code}")
+            }
+            val body = response.body?.string().orEmpty()
+            val raw = JSONObject(body).getJSONObject("data").optString("text")
+            val text = stripTranslationMarkup(raw)
+            if (text.isBlank()) throw IllegalStateException("Blank ms.basmeih")
+            return text
+        }
     }
 
     private fun fetchScriptText(
@@ -147,6 +209,7 @@ class QuranApi(
                 ayahNumber = ayahNumber,
                 textArabic = text,
                 audioUrl = audio,
+                textMalay = fetchMalayOrEmpty(surahNumber, ayahNumber),
             )
         }
     }
@@ -156,5 +219,25 @@ class QuranApi(
         const val ALAFASY_RECITATION_ID = 7
         const val VERSES_CDN_BASE = "https://verses.quran.com"
         const val RECITER_DISPLAY_NAME = "Sheikh Mishari Rashid Al-Afasy"
+
+        /** Quran.com translation resource: Abdullah Muhammad Basmeih (Bahasa Melayu). */
+        const val BASMEIH_RESOURCE_ID = 39
+
+        /** Strip footnote tags and a few entities from Quran.com translation HTML. */
+        fun stripTranslationMarkup(raw: String): String {
+            if (raw.isBlank()) return ""
+            var text = raw
+                .replace(Regex("(?is)<sup\\b[^>]*>.*?</sup>"), "")
+                .replace(Regex("(?is)<[^>]+>"), " ")
+            text = text
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace("&apos;", "'")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+            return text.replace(Regex("\\s+"), " ").trim()
+        }
     }
 }

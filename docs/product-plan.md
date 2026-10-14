@@ -21,16 +21,15 @@ Calm, quiet companion energy: one ayah at a time, listen + read together (Al-Afa
 
 - Auth, cloud sync, multiple users
 - Spaced-repetition decks, Journey/streak pages, multi-stage challenges
-- Translation UI (Arabic-only for now)
-- Reciter picker (fixed to Al-Afasy)
+- Reciter picker (fixed to Al-Afasy). Malay Basmeih is under the Arabic ayah (v1.12); Arabic stays primary
 - Word-level highlight while playing (needs timing data; deferred)
 - Full mushaf browser, bookmarks
 - iOS / Wear OS
 
 ## next plan
 1. Add 50x repeat
-2. Translation in Malay for the main page
-3. Add forward/backward ayah
+2. Translation in Malay for the main page — shipped in v1.12 (Basmeih, under the Arabic ayah; widget middle toggles it)
+3. Add forward/backward ayah — shipped in v1.12 (previous / next; Remembered unchanged)
 4. Simply the menu selection 
 
 ## Technical notes

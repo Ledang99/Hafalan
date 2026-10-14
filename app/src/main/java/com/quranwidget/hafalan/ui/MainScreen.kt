@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.BarChart
@@ -86,6 +88,7 @@ fun MainScreen(
     onDismissSurahPicker: () -> Unit,
     onSurahSelected: (Int) -> Unit,
     onRemembered: () -> Unit,
+    onStepAyah: (Int) -> Unit,
     onPlay: () -> Unit,
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
@@ -116,6 +119,7 @@ fun MainScreen(
             onDismissSurahPicker = onDismissSurahPicker,
             onSurahSelected = onSurahSelected,
             onRemembered = onRemembered,
+            onStepAyah = onStepAyah,
             onPlay = onPlay,
             onPlaybackSpeed = onPlaybackSpeed,
             onScriptEdition = onScriptEdition,
@@ -137,6 +141,7 @@ private fun HomeScreen(
     onDismissSurahPicker: () -> Unit,
     onSurahSelected: (Int) -> Unit,
     onRemembered: () -> Unit,
+    onStepAyah: (Int) -> Unit,
     onPlay: () -> Unit,
     onPlaybackSpeed: (Float) -> Unit,
     onScriptEdition: (ScriptEdition) -> Unit,
@@ -198,13 +203,38 @@ private fun HomeScreen(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Ayah ${state.hafalan.ayahNumber} of ${state.surah.ayahCount}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                IconButton(
+                    onClick = { onStepAyah(-1) },
+                    enabled = !state.loading && state.hafalan.ayahNumber > 1,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "Previous ayah",
+                    )
+                }
+                Text(
+                    text = "Ayah ${state.hafalan.ayahNumber} of ${state.surah.ayahCount}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                IconButton(
+                    onClick = { onStepAyah(1) },
+                    enabled = !state.loading && state.hafalan.ayahNumber < state.surah.ayahCount,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Next ayah",
+                    )
+                }
+            }
+            Spacer(Modifier.height(20.dp))
 
             when {
                 state.loading -> {
@@ -226,6 +256,25 @@ private fun HomeScreen(
                             textDirection = TextDirection.Rtl,
                             color = MaterialTheme.colorScheme.onBackground,
                         ),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = "Bahasa Melayu",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = state.hafalan.cachedMalayText.ifBlank { "Terjemahan tidak tersedia" },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.82f),
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = "Abdullah Muhammad Basmeih",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.38f),
+                        textAlign = TextAlign.Center,
                     )
                 }
             }

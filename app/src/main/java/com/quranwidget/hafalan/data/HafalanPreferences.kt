@@ -25,6 +25,9 @@ class HafalanPreferences(private val context: Context) {
         val lastActivityDate = stringPreferencesKey("last_activity_date")
         val rememberedForCurrent = booleanPreferencesKey("remembered_for_current")
         val cachedAyahText = stringPreferencesKey("cached_ayah_text")
+        val cachedMalayText = stringPreferencesKey("cached_malay_text")
+        val widgetShowMalay = booleanPreferencesKey("widget_show_malay")
+        val widgetConcealed = booleanPreferencesKey("widget_concealed")
         val playbackSpeed = floatPreferencesKey("playback_speed")
         val scriptEdition = stringPreferencesKey("script_edition")
         val repeatAyah = booleanPreferencesKey("repeat_ayah") // legacy; migrated to repeatCount
@@ -43,6 +46,7 @@ class HafalanPreferences(private val context: Context) {
             lastActivityDate = prefs[Keys.lastActivityDate].orEmpty(),
             rememberedForCurrent = prefs[Keys.rememberedForCurrent] ?: false,
             cachedAyahText = prefs[Keys.cachedAyahText].orEmpty(),
+            cachedMalayText = prefs[Keys.cachedMalayText].orEmpty(),
         )
     }
 
@@ -91,6 +95,7 @@ class HafalanPreferences(private val context: Context) {
             prefs[Keys.lastActivityDate] = state.lastActivityDate
             prefs[Keys.rememberedForCurrent] = state.rememberedForCurrent
             prefs[Keys.cachedAyahText] = state.cachedAyahText
+            prefs[Keys.cachedMalayText] = state.cachedMalayText
         }
     }
 
@@ -148,6 +153,7 @@ class HafalanPreferences(private val context: Context) {
             prefs[Keys.lastActivityDate] = state.lastActivityDate
             prefs[Keys.rememberedForCurrent] = state.rememberedForCurrent
             prefs[Keys.cachedAyahText] = ""
+            prefs[Keys.cachedMalayText] = ""
             if (!scriptEditionId.isNullOrBlank()) {
                 prefs[Keys.scriptEdition] = ScriptEdition.fromId(scriptEditionId).id
             }
@@ -189,4 +195,22 @@ class HafalanPreferences(private val context: Context) {
     suspend fun appTheme(): AppThemeMode = appThemeFlow.first()
 
     suspend fun widgetAppearance(): WidgetAppearance = widgetAppearanceFlow.first()
+
+    suspend fun widgetShowMalay(): Boolean =
+        context.hafalanDataStore.data.map { it[Keys.widgetShowMalay] ?: false }.first()
+
+    suspend fun toggleWidgetShowMalay() {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.widgetShowMalay] = !(prefs[Keys.widgetShowMalay] ?: false)
+        }
+    }
+
+    suspend fun widgetConcealed(): Boolean =
+        context.hafalanDataStore.data.map { it[Keys.widgetConcealed] ?: false }.first()
+
+    suspend fun setWidgetConcealed(concealed: Boolean) {
+        context.hafalanDataStore.edit { prefs ->
+            prefs[Keys.widgetConcealed] = concealed
+        }
+    }
 }

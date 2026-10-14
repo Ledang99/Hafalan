@@ -182,6 +182,19 @@ class MainViewModel(
         }
     }
 
+    fun stepAyah(delta: Int) {
+        viewModelScope.launch {
+            loading.value = true
+            error.value = null
+            runCatching {
+                repository.stepAyah(delta)
+            }.onFailure {
+                error.value = it.message ?: "Could not change ayah"
+            }
+            loading.value = false
+        }
+    }
+
     fun markRemembered() {
         viewModelScope.launch {
             loading.value = true

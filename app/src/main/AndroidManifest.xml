@@ -38,6 +38,20 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <service
+            android:name=".widget.WidgetAyahScrollService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <receiver
+            android:name=".widget.UnlockPrivacyReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.quranwidget.hafalan.ACTION_PRIVACY_CHECK" />
+                <action android:name="android.intent.action.USER_PRESENT" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".widget.HafalanWidgetProvider"
             android:exported="true"
@@ -47,6 +61,7 @@
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_REFRESH" />
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_PLAY" />
                 <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_STOP" />
+                <action android:name="com.quranwidget.hafalan.ACTION_WIDGET_MIDDLE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

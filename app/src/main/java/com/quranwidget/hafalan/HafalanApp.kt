@@ -2,6 +2,7 @@ package com.quranwidget.hafalan
 
 import android.app.Application
 import com.quranwidget.hafalan.data.HafalanRepository
+import com.quranwidget.hafalan.widget.WidgetUnlockMonitor
 
 class HafalanApp : Application() {
     lateinit var repository: HafalanRepository
@@ -11,6 +12,7 @@ class HafalanApp : Application() {
         super.onCreate()
         instance = this
         repository = HafalanRepository(this)
+        WidgetUnlockMonitor.register(this)
     }
 
     companion object {
