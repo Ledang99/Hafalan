@@ -4,8 +4,8 @@
 Android home-screen widget for daily Quran hafalan, driven by a small companion app.
 
 ## Version
-- `versionName` **1.14** · `versionCode` **114**
-- Progress screen footer shows `Version 1.14`
+- `versionName` **1.15** · `versionCode` **115**
+- Progress screen footer shows `Version 1.15`
 
 ## Decisions
 - Platform: Android App Widget + main app
@@ -19,7 +19,7 @@ Android home-screen widget for daily Quran hafalan, driven by a small companion 
 - Appearance: **Day / Dark** chips (persisted); app Material theme + widget default background follow the choice until the user customizes widget color
 - Widget background: color swatches + opacity 0–100% on Home (below play controls); ARGB applied via RemoteViews; text + tajweed palette follow background luminance (readable on light or dark)
 - Widget resize: `resizeMode=horizontal|vertical` with min/max resize; `onAppWidgetOptionsChanged` re-pushes RemoteViews; Arabic auto-size (12–56sp XML + size hint from tile height) fills the new size; meta stays secondary
-- Widget typography: Arabic uses **same bundled KFGQPC Uthmanic Hafs** as Compose (`res/font/uthmanic_hafs.ttf`). RemoteViews cannot set custom Typeface across processes, so the widget **rasterizes** ayah text into an ImageView bitmap
+- Widget typography: Arabic uses **same bundled KFGQPC Uthmanic Hafs** as Compose (`res/font/uthmanic_hafs.ttf`). RemoteViews cannot set custom Typeface across processes, so the widget **rasterizes** ayah text into an ImageView bitmap. Frame and single-image views use `fitCenter` (uniform scale). Binder size caps scale width and height together so long-ayah slices keep that aspect
 - Widget controls (v1.11+): far-left **Stop** → `AyahPlaybackService.ACTION_STOP`; far-right **Tap to listen** → play. v1.12 middle (ayah area + **Terjemahan**) toggles Arabic / Bahasa Melayu and does not start playback
 - Malay (v1.12): Quran.com translation resource **39** (Abdullah Muhammad Basmeih), fallback `ms.basmeih`. Shown under the Arabic ayah in the app. Cached with the current ayah only
 - Ayah navigation (v1.12): previous / next inside the current surah. Remembered still records the set and advances. Widget follows the shared pointer

@@ -109,13 +109,13 @@ object WidgetAyahFont {
             heightDp.coerceAtLeast(40).toFloat(),
             metrics,
         ).toInt().coerceAtLeast(1)
-        // Cap so a tall tile cannot blow the binder when several frames are sent.
-        if (widthPx > 900) {
-            val scale = 900f / widthPx
-            widthPx = 900
+        // One scale for both axes. Clamping height alone changes the bitmap
+        // aspect; fitXY on the frame then stretched KFGQPC glyphs.
+        val scale = minOf(1f, 900f / widthPx, 640f / heightPx)
+        if (scale < 1f) {
+            widthPx = (widthPx * scale).toInt().coerceAtLeast(1)
             heightPx = (heightPx * scale).toInt().coerceAtLeast(1)
         }
-        if (heightPx > 640) heightPx = 640
 
         val safeMax = maxSp.coerceIn(12f, 72f)
         var lo = 12f
